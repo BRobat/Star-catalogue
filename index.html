@@ -1,0 +1,1241 @@
+<title>Gaia Star Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed 3D star field; floating instrument panels (controls left, HR diagram bottom-right, star card top-right). Single dark world by choice. */
+:root {
+  --ink: #060912;          /* deep space ground */
+  --panel: rgba(13, 18, 32, 0.84);
+  --line: rgba(160, 176, 214, 0.16);
+  --fg: #e6e9f2;
+  --muted: #8d96ad;
+  --foil: #d8b46a;         /* Gaia sunshield gold, the one accent */
+  --foil-dim: rgba(216, 180, 106, 0.18);
+  --gaia: #7fb2ff;
+  --hip: #f0a35e;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--ink); color: var(--fg); font: 13px/1.45 var(--f-body); overflow: hidden; }
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#gl:active { cursor: grabbing; }
+.panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+#side { top: calc(14px + env(safe-area-inset-top, 0px)); left: 14px; width: 290px; max-height: calc(100% - 28px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+h1 { margin: 0; font: 700 26px/1 var(--f-display); letter-spacing: -0.01em; }
+h1 span { color: var(--foil); }
+.sub { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.stat { font: 12px/1.4 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.stat b { color: var(--fg); font-weight: 500; }
+.label { font: 500 10.5px/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.label output { color: var(--foil); letter-spacing: 0.02em; text-transform: none; }
+.group { display: flex; flex-direction: column; gap: 8px; }
+input[type=range] { width: 100%; accent-color: var(--foil); }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg button { background: transparent; border: 0; color: var(--muted); font: 500 12px var(--f-body); padding: 7px 4px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--foil-dim); color: var(--fg); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip, .btn { background: transparent; border: 1px solid var(--line); color: var(--fg); border-radius: 999px; padding: 5px 10px; font: 12px var(--f-body); cursor: pointer; }
+.chip:hover, .btn:hover { border-color: var(--foil); }
+.btn.primary { background: var(--foil); color: #1b1408; border-color: var(--foil); font-weight: 500; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--foil); outline-offset: 2px; }
+#search { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 7px; color: var(--fg); padding: 8px 10px; font: 13px var(--f-body); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.ramp { height: 6px; border-radius: 3px; }
+details { border-top: 1px solid var(--line); padding-top: 12px; }
+summary { cursor: pointer; font: 500 12.5px var(--f-body); color: var(--fg); }
+details p { color: var(--muted); font-size: 12px; margin: 8px 0; }
+pre { background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: 11px/1.45 var(--f-mono); white-space: pre-wrap; word-break: break-word; margin: 0; color: var(--fg); }
+.row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+a { color: var(--foil); }
+
+#hr { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 12px 12px 10px; width: 300px; }
+#hrc { width: 100%; height: 250px; display: block; cursor: crosshair; touch-action: none; }
+#hr .label { margin-bottom: 8px; }
+#hr .hint { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; justify-content: space-between; gap: 8px; }
+#hr .hint button { background: none; border: 0; color: var(--foil); font: 11px var(--f-body); cursor: pointer; padding: 0; }
+
+#card { top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; width: 300px; padding: 14px 16px; }
+#card h2 { margin: 0 0 2px; font: 700 20px/1.15 var(--f-display); text-wrap: balance; }
+#card .alt { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+#card dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0 0 12px; font: 12px var(--f-mono); font-variant-numeric: tabular-nums; }
+#card dt { color: var(--muted); }
+#card dd { margin: 0; text-align: right; }
+#card .x { position: absolute; top: 8px; right: 10px; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
+.src-g { color: var(--gaia); } .src-h { color: var(--hip); }
+
+#timebar { left: 332px; right: 342px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 12px 16px 12px; display: flex; flex-direction: column; gap: 8px; max-width: 760px; margin-inline: auto; }
+.tb-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.play { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--foil); color: #1b1408; display: grid; place-items: center; cursor: pointer; flex: none; }
+.tb-read { flex: 1; min-width: 140px; }
+.tb-t { font: 700 22px/1.05 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.tb-sub { font: 11px/1.4 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.tb-speed { grid-template-columns: repeat(3, auto); }
+.tb-speed button, .tb-frame button { padding: 6px 10px; white-space: nowrap; }
+.tb-frame { grid-template-columns: repeat(2, auto); }
+.tb-scale { display: flex; justify-content: space-between; font: 10px var(--f-mono); color: var(--muted); margin-top: -4px; }
+#timebar.off .tb-hide { display: none; }
+#timebar.off { gap: 0; }
+.tb-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+#card .row + .row, #card .spot + .row { margin-top: 6px; }
+#card .spot { border-top: 1px solid var(--line); padding-top: 10px; margin: 2px 0 12px; display: flex; flex-direction: column; gap: 4px; }
+.lbl.near { color: rgba(230,233,242,0.92); }
+.lbl .d { color: var(--muted); font-family: var(--f-mono); font-size: 10px; margin-left: 4px; }
+.chip[aria-pressed=true] { border-color: var(--foil); color: var(--foil); }
+@media (max-width: 1100px) and (min-width: 761px) { #timebar { left: 332px; right: 14px; bottom: calc(322px + env(safe-area-inset-bottom, 0px)); } }
+#graphOut { width: 100%; height: 90px; box-sizing: border-box; background: rgba(255,255,255,0.04); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; font: 10px var(--f-mono); margin-top: 6px; }
+.lanes { border-top: 1px solid var(--line); padding-top: 12px; }
+#laneOpts { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+#laneOpts[hidden] { display: none; }
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.lbl { position: absolute; left: 0; top: 0; font: 11px var(--f-body); color: rgba(230,233,242,0.78); white-space: nowrap; text-shadow: 0 0 4px var(--ink); will-change: transform; }
+.lbl.sel { color: var(--foil); font-weight: 500; }
+.lbl.gc { color: var(--foil); font: 500 10.5px var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+
+#loading { position: fixed; inset: 0; display: grid; place-items: center; font: 13px var(--f-mono); color: var(--muted); pointer-events: none; }
+#drop { position: fixed; inset: 0; border: 2px dashed var(--foil); background: rgba(6,9,18,0.7); display: grid; place-items: center; font: 600 22px var(--f-display); color: var(--foil); z-index: 10; }
+#toggles { display: none; }
+
+@media (max-width: 760px) {
+  #side { top: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); left: 10px; right: 10px; width: auto; max-height: 52%; }
+  #hr { left: 10px; right: 10px; width: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #card { left: 10px; right: 10px; width: auto; top: calc(56px + env(safe-area-inset-top, 0px)); }
+  #toggles { display: flex; position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px; gap: 6px; }
+  #toggles .chip { background: var(--panel); }
+  body.m-hide-side #side, body.m-hide-hr #hr { display: none; }
+  #timebar { left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; }
+  #side, #hr { bottom: calc(200px + env(safe-area-inset-bottom, 0px)); }
+  #side { max-height: 40%; }
+  .tb-t { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<canvas id="gl" aria-label="3D map of stars around the Sun"></canvas>
+<div id="labels"></div>
+<div id="loading">Loading 118,658 stars…</div>
+
+<div id="toggles">
+  <button class="chip" id="tSide" type="button">Controls</button>
+  <button class="chip" id="tHr" type="button">HR diagram</button>
+</div>
+
+<aside id="side" class="panel">
+  <div>
+    <h1>Gaia <span>Star Atlas</span></h1>
+    <p class="sub">Stars around the Sun, placed in 3D by their measured distances and moved along their measured velocities. Galactic plane is horizontal; the Sun sits at the centre.</p>
+  </div>
+  <div class="stat" id="stat">–</div>
+
+  <div class="group">
+    <input id="search" list="names" placeholder="Find a star: Betelgeuse, Vega…" autocomplete="off">
+    <datalist id="names"></datalist>
+    <div class="chips">
+      <button class="chip" data-view="near" type="button">Neighbourhood</button>
+      <button class="chip" data-view="all" type="button">Whole catalogue</button>
+      <button class="chip" data-view="top" type="button">Top-down</button>
+      <button class="chip" data-view="edge" type="button">Edge-on</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="label">Colour by</div>
+    <div class="seg" id="colorMode">
+      <button type="button" data-m="temp" aria-pressed="true">Temperature</button>
+      <button type="button" data-m="src" aria-pressed="false">Data source</button>
+      <button type="button" data-m="dist" aria-pressed="false">Distance</button>
+    </div>
+    <div id="legend" class="legend"></div>
+  </div>
+
+  <div class="group">
+    <label class="label" for="maxDist">Max distance from Sun <output id="maxDistOut"></output></label>
+    <input type="range" id="maxDist" min="0" max="1000" value="1000">
+  </div>
+  <div class="group">
+    <label class="label" for="exposure">Exposure <output id="exposureOut"></output></label>
+    <input type="range" id="exposure" min="0" max="100" value="75">
+  </div>
+  <div class="group">
+    <label class="label" for="floor">Faint-star visibility <output id="floorOut"></output></label>
+    <input type="range" id="floor" min="0" max="100" value="35">
+  </div>
+  <div class="row">
+    <button class="chip" id="rotate" type="button" aria-pressed="false">Auto-rotate</button>
+    <button class="chip" id="gridBtn" type="button" aria-pressed="true">Distance rings</button>
+  </div>
+
+  <div class="group lanes">
+    <div class="row" style="justify-content:space-between">
+      <div class="label" style="flex:1">Star lanes</div>
+      <button class="chip" id="lanesBtn" type="button" aria-pressed="true">Hide lanes</button>
+    </div>
+    <div id="laneOpts">
+      <div class="group">
+        <label class="label" for="laneR">Region around Sun <output id="laneROut"></output></label>
+        <input type="range" id="laneR" min="15" max="200" value="40">
+      </div>
+      <div class="group">
+        <label class="label" for="laneJ">Max jump <output id="laneJOut"></output></label>
+        <input type="range" id="laneJ" min="5" max="80" value="35">
+      </div>
+      <div class="group">
+        <div class="label">Links per star</div>
+        <div class="seg" id="laneK" style="grid-template-columns:repeat(4,1fr)">
+          <button type="button" data-k="2" aria-pressed="false">2</button>
+          <button type="button" data-k="3" aria-pressed="false">3</button>
+          <button type="button" data-k="4" aria-pressed="false">4</button>
+          <button type="button" data-k="6" aria-pressed="true">6</button>
+        </div>
+      </div>
+      <div class="stat" id="laneStat"></div>
+      <div class="row"><button class="btn" id="copyGraph" type="button">Copy graph as JSON</button></div>
+      <p class="sub" id="laneNote">Each star links to its nearest neighbours within the jump range. Click a star, then “Route here” for the shortest path from the start star. Faint red dwarfs are missing beyond about 20 pc, so far lanes run longer than real ones would.</p>
+      <textarea id="graphOut" hidden readonly aria-label="Graph JSON"></textarea>
+    </div>
+  </div>
+
+  <details>
+    <summary>Load your own Gaia query</summary>
+    <p>Run this ADQL in the <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="noopener">Gaia Archive</a> (Advanced/ADQL tab), download the result as CSV, then drop it on this page. Columns needed: <code>ra, dec, parallax, phot_g_mean_mag</code>; <code>bp_rp</code> adds colour and <code>pmra, pmdec, radial_velocity</code> add motion.</p>
+    <pre id="adql">SELECT TOP 300000 source_id, ra, dec, parallax,
+       phot_g_mean_mag, bp_rp,
+       pmra, pmdec, radial_velocity
+FROM gaiadr3.gaia_source
+WHERE parallax &gt; 2
+  AND parallax_over_error &gt; 10
+  AND bp_rp IS NOT NULL</pre>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="copyAdql" type="button">Copy query</button>
+      <label class="btn primary" for="file" style="cursor:pointer">Choose CSV…</label>
+      <input type="file" id="file" accept=".csv,text/csv" hidden>
+      <button class="btn" id="reset" type="button" hidden>Back to built-in</button>
+    </div>
+  </details>
+  <details>
+    <summary>About this data</summary>
+    <p>Gaia DR3 measured about 1.8 billion sources, far more than a browser can hold. The built-in set is the HYGLike subset of AT-HYG v3.2: 118,658 bright stars with positions from Tycho-2 and Hipparcos, where 98% take their distance and motion from Gaia DR3 parallaxes. The remaining stars, mostly the brightest ones Gaia saturates on, keep Hipparcos distances.</p>
+    <p>Drift uses each star's Gaia proper motion and, for 84% of stars, its measured radial velocity. Stars without one move only across the sky. Motion is a straight line, which holds up for a few million years; real orbits curve around the Galaxy over hundreds of millions.</p>
+    <p>Star size reflects how bright each star would look from the camera's current position, computed from its absolute magnitude. Fly close to a star and it brightens.</p>
+  </details>
+</aside>
+
+<section id="hr" class="panel" aria-label="Hertzsprung–Russell diagram">
+  <div class="label"><span>Hertzsprung–Russell diagram</span><output id="hrCount"></output></div>
+  <canvas id="hrc"></canvas>
+  <div class="hint"><span id="hrHint">Drag to select a region and isolate it in 3D</span><button id="clearBox" type="button" hidden>Clear selection</button></div>
+</section>
+
+<section id="timebar" class="panel" aria-label="Stellar drift over time">
+  <div class="tb-top">
+    <button class="play tb-hide" id="play" type="button" aria-label="Play">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path id="playIcon" d="M4 2.5v11l9-5.5z" fill="currentColor"></path></svg>
+    </button>
+    <div class="tb-read">
+      <div class="tb-t" id="tRead">Today</div>
+      <div class="tb-sub" id="tSub">Gaia epoch J2016 · positions as measured</div>
+    </div>
+    <div class="seg tb-speed tb-hide" id="speed" aria-label="Playback speed">
+      <button type="button" data-s="0.001" aria-pressed="false">1 kyr/s</button>
+      <button type="button" data-s="0.01" aria-pressed="true">10 kyr/s</button>
+      <button type="button" data-s="0.1" aria-pressed="false">100 kyr/s</button>
+    </div>
+    <button class="chip" id="driftBtn" type="button" aria-pressed="true" title="Turn stellar motion on or off">Drift on</button>
+  </div>
+  <input class="tb-hide" type="range" id="time" min="-1000" max="1000" value="0" aria-label="Time offset from today">
+  <div class="tb-scale tb-hide" aria-hidden="true"><span>−5 Myr</span><span>−1.25</span><span>now</span><span>+1.25</span><span>+5 Myr</span></div>
+  <div class="tb-row tb-hide">
+    <div class="seg tb-frame" id="frame" aria-label="Reference frame">
+      <button type="button" data-f="sun" aria-pressed="true" title="Velocities as seen from the Sun; the Sun stays put">Sun at rest</button>
+      <button type="button" data-f="lsr" aria-pressed="false" title="Local standard of rest; the Sun drifts too">Galactic frame</button>
+    </div>
+    <button class="chip" id="trails" type="button" aria-pressed="true">Trails</button>
+    <button class="chip" id="g710" type="button">Gliese 710 flyby</button>
+    <button class="chip" id="now" type="button">Today</button>
+  </div>
+</section>
+
+<section id="card" class="panel" hidden aria-live="polite">
+  <button class="x" id="closeCard" type="button" aria-label="Close">×</button>
+  <h2 id="cName"></h2>
+  <div class="alt" id="cAlt"></div>
+  <dl id="cDl"></dl>
+  <div class="row"><button class="btn primary" id="flyTo" type="button">Fly to star</button><button class="btn" id="follow" type="button" aria-pressed="false">Follow</button><button class="btn" id="homeBtn" type="button">Back to Sun</button></div>
+  <div class="spot">
+    <div class="row" style="justify-content:space-between"><span class="label" style="flex:1">Spotlight neighbours</span><button class="chip" id="spotBtn" type="button" aria-pressed="true">On</button></div>
+    <label class="label" for="spotR" style="margin-top:8px">Radius <output id="spotROut"></output></label>
+    <input type="range" id="spotR" min="0" max="1000" value="160">
+    <div class="stat" id="spotStat"></div>
+  </div>
+  <div class="row" id="routeRow" hidden><button class="btn" id="routeTo" type="button">Route here</button><button class="btn" id="setOrigin" type="button">Set as route start</button></div>
+</section>
+
+<div id="drop" hidden>Drop a Gaia CSV to load it</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const fmt = new Intl.NumberFormat('en-US');
+const PC_LY = 3.26156;
+
+// ---------- data state ----------
+let D = null; // {n, x,y,z, mag, absmag, ci, hip, gaia, spect, names, spectList, ciLabel, isGaiaUpload}
+let builtin = null;
+const S = { lanesOn: true, colorMode: 'temp', maxDist: Infinity, box: null, sel: -1, rotate: false, t: 0, fv: [0, 0, 0], frame: 'sun', playing: false, speed: 0.01, trails: true, follow: true, origin: 0, route: null };
+
+// ---------- colour helpers ----------
+function bvToRgb(bv) {
+  const t = 4600 * (1 / (0.92 * bv + 1.7) + 1 / (0.92 * bv + 0.62));
+  const T = t / 100; let r, g, b;
+  if (T <= 66) { r = 255; g = 99.47 * Math.log(T) - 161.12; b = T <= 19 ? 0 : 138.52 * Math.log(T - 10) - 305.04; }
+  else { r = 329.7 * Math.pow(T - 60, -0.1332); g = 288.12 * Math.pow(T - 60, -0.0755); b = 255; }
+  const c = (v) => Math.min(255, Math.max(0, v)) / 255;
+  return [c(r), c(g), c(b), t];
+}
+const hex = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+const DIST_STOPS = [hex('#f6d27a'), hex('#e0735a'), hex('#9a4fb8'), hex('#3f6fd8')];
+function distColor(d) {
+  const t = Math.min(1, Math.max(0, Math.log10(Math.max(d, 1)) / 3.4)) * (DIST_STOPS.length - 1);
+  const i = Math.min(DIST_STOPS.length - 2, Math.floor(t)), f = t - i;
+  return DIST_STOPS[i].map((v, k) => v + (DIST_STOPS[i + 1][k] - v) * f);
+}
+const bvOf = (ci) => D.isGaiaUpload ? 0.8 * ci : ci;
+
+// ---------- three.js ----------
+const canvas = $('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x060912, 1);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, 1, 0.005, 1e6);
+camera.up.set(0, 0, 1);
+camera.position.set(-9, -14, 7);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 0.02; controls.maxDistance = 60000;
+controls.zoomSpeed = 1.4; controls.autoRotateSpeed = 0.35;
+
+const KMS_PCMYR = 1.02271;
+const SUN_LSR = [11.1 * KMS_PCMYR, 12.24 * KMS_PCMYR, 7.25 * KMS_PCMYR]; // Schönrich+2010 solar motion, galactic U,V,W
+const uniforms = {
+  uLimit: { value: 7 }, uFloor: { value: 0.35 }, uMaxDist: { value: 1e9 },
+  uBox: { value: new THREE.Vector4(-9, 9, -99, 99) }, uBoxOn: { value: 0 },
+  uPR: { value: renderer.getPixelRatio() }, uSel: { value: -1 },
+  uT: { value: 0 }, uFrame: { value: new THREE.Vector3() }, uTrail: { value: 0.03 }, uLaneA: { value: 0.3 },
+  uFocus: { value: new THREE.Vector3() }, uFocusR: { value: 7.67 }, uFocusOn: { value: 0 }
+};
+const COMMON = `
+  attribute vec3 aVel;
+  uniform float uLimit, uFloor, uMaxDist, uBoxOn, uPR, uSel, uT, uTrail, uLaneA, uFocusR, uFocusOn; uniform vec4 uBox; uniform vec3 uFrame, uFocus;
+  float focusW(vec3 p){ return uFocusOn < 0.5 ? 1.0 : 1.0 - smoothstep(uFocusR * 0.92, uFocusR * 1.08, distance(p, uFocus)); }
+  float appB(float absM, float d){ float m = absM + 5.0 * log(max(d,1e-4) / 10.0) / log(10.0); return pow(10.0, -0.4 * (m - uLimit)); }
+`;
+const material = new THREE.ShaderMaterial({
+  uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: COMMON + `
+    attribute vec3 aColor; attribute float aAbs; attribute float aCi; attribute float aIdx;
+    varying vec3 vColor; varying float vAlpha; varying float vCore;
+    void main(){
+      vec3 p = position + (aVel + uFrame) * uT;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      if (length(position) > uMaxDist) { gl_PointSize = 0.0; vAlpha = 0.0; return; }
+      float b = appB(aAbs, length(mv.xyz));
+      float s = clamp(1.6 * pow(b, 0.38), 0.0, 22.0);
+      float a = max(clamp(b, 0.0, 1.0), uFloor * 0.55);
+      s = max(s, 1.0 + uFloor * 1.2);
+      bool inBox = aCi >= uBox.x && aCi <= uBox.y && aAbs >= uBox.z && aAbs <= uBox.w;
+      if (uBoxOn > 0.5 && !inBox) { a *= 0.07; s = min(s, 1.5); }
+      if (uFocusOn > 0.5) { float w = focusW(p); a = mix(a * 0.12, max(a, 0.92), w); s = mix(min(s, 1.4), max(s, 3.2), w); }
+      if (abs(aIdx - uSel) < 0.5) { s = max(s, 9.0); a = 1.0; }
+      vCore = clamp(b * 0.6, 0.0, 1.0);
+      gl_PointSize = s * uPR;
+      vColor = aColor; vAlpha = a;
+    }`,
+  fragmentShader: `
+    varying vec3 vColor; varying float vAlpha; varying float vCore;
+    void main(){
+      float r = length(gl_PointCoord - 0.5) * 2.0;
+      if (r > 1.0) discard;
+      float glow = exp(-r * r * 3.5);
+      float core = smoothstep(0.35, 0.0, r) * vCore;
+      vec3 c = mix(vColor, vec3(1.0), core * 0.7);
+      gl_FragColor = vec4(c * vAlpha * (glow + core), 1.0);
+    }`
+});
+// motion trails: one segment per star, head at time t, tail at t - uTrail
+const trailMat = new THREE.ShaderMaterial({
+  uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: COMMON + `
+    attribute vec3 aColor; attribute float aAbs; attribute float aCi; attribute float aEnd;
+    varying vec3 vColor; varying float vA;
+    void main(){
+      vec3 p = position + (aVel + uFrame) * (uT - aEnd * uTrail);
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      bool inBox = aCi >= uBox.x && aCi <= uBox.y && aAbs >= uBox.z && aAbs <= uBox.w;
+      float a = clamp(appB(aAbs, length(mv.xyz)), 0.0, 1.0);
+      a = max(a, uFloor * 0.3) * 0.55 * (1.0 - aEnd);
+      if (uFocusOn > 0.5) { float w = focusW(p); a *= mix(0.1, 2.0, w); }
+      if (length(position) > uMaxDist || (uBoxOn > 0.5 && !inBox)) a = 0.0;
+      vColor = aColor; vA = a;
+    }`,
+  fragmentShader: `varying vec3 vColor; varying float vA; void main(){ gl_FragColor = vec4(vColor * vA, 1.0); }`
+});
+// star lanes: segments between linked stars, moving with both endpoints
+const laneMat = new THREE.ShaderMaterial({
+  uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: COMMON + `
+    attribute float aHi;
+    varying float vA; varying float vHi;
+    void main(){
+      vec3 p = position + (aVel + uFrame) * uT;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      vHi = aHi; vA = aHi > 0.5 ? 1.0 : uLaneA * (uFocusOn > 0.5 ? mix(0.15, 2.2, focusW(p)) : 1.0);
+    }`,
+  fragmentShader: `varying float vA; varying float vHi;
+    void main(){ vec3 c = mix(vec3(0.45, 0.58, 0.85), vec3(0.85, 0.71, 0.42), vHi); gl_FragColor = vec4(c * vA, 1.0); }`
+});
+let geom = null, points = null, trailGeom = null, trails = null;
+let laneGeom = null, lanes = null;
+const focusRing = (() => {
+  const pts = []; for (let i = 0; i <= 160; i++) { const a = i / 160 * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); }
+  const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xd8b46a, transparent: true, opacity: 0.45, depthWrite: false }));
+  l.visible = false; l.frustumCulled = false; return l;
+})();
+scene.add(focusRing);
+
+// rings in the galactic plane
+const grid = new THREE.Group();
+function buildGrid() {
+  grid.clear();
+  const ringMat = new THREE.LineBasicMaterial({ color: 0xd8b46a, transparent: true, opacity: 0.16 });
+  [10, 100, 1000, 5000].forEach(r => {
+    const pts = []; for (let i = 0; i <= 128; i++) { const a = i / 128 * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0)); }
+    grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat));
+  });
+  const axMat = new THREE.LineBasicMaterial({ color: 0xd8b46a, transparent: true, opacity: 0.35 });
+  grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(6000, 0, 0)]), axMat));
+}
+buildGrid(); scene.add(grid);
+const RING_LABELS = [10, 100, 1000, 5000].map(r => ({ p: new THREE.Vector3(0, -r, 0), t: r >= 1000 ? `${r / 1000} kpc · ${fmt.format(Math.round(r * PC_LY))} ly` : `${r} pc · ${Math.round(r * PC_LY)} ly` }));
+
+// star position at the current time, in the current frame
+const PX = (i) => D.x[i] + (D.vx[i] + S.fv[0]) * S.t;
+const PY = (i) => D.y[i] + (D.vy[i] + S.fv[1]) * S.t;
+const PZ = (i) => D.z[i] + (D.vz[i] + S.fv[2]) * S.t;
+// heliocentric distance at the current time (frame-independent)
+const distNow = (i) => Math.hypot(D.x[i] + D.vx[i] * S.t, D.y[i] + D.vy[i] * S.t, D.z[i] + D.vz[i] * S.t);
+
+function buildGeometry() {
+  if (points) { scene.remove(points); geom.dispose(); scene.remove(trails); trailGeom.dispose(); }
+  if (!D.vx) { D.vx = new Float32Array(D.n); D.vy = new Float32Array(D.n); D.vz = new Float32Array(D.n); }
+  geom = new THREE.BufferGeometry();
+  const pos = new Float32Array(D.n * 3), vel = new Float32Array(D.n * 3), idx = new Float32Array(D.n);
+  for (let i = 0; i < D.n; i++) {
+    pos[i * 3] = D.x[i]; pos[i * 3 + 1] = D.y[i]; pos[i * 3 + 2] = D.z[i]; idx[i] = i;
+    vel[i * 3] = D.vx[i]; vel[i * 3 + 1] = D.vy[i]; vel[i * 3 + 2] = D.vz[i];
+  }
+  geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geom.setAttribute('aVel', new THREE.BufferAttribute(vel, 3));
+  geom.setAttribute('aAbs', new THREE.BufferAttribute(D.absmag, 1));
+  geom.setAttribute('aCi', new THREE.BufferAttribute(D.ci, 1));
+  geom.setAttribute('aIdx', new THREE.BufferAttribute(idx, 1));
+  geom.setAttribute('aColor', new THREE.BufferAttribute(new Float32Array(D.n * 3), 3));
+  geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e7);
+  points = new THREE.Points(geom, material); points.frustumCulled = false;
+  // trails: duplicate every star into a head (aEnd 0) and tail (aEnd 1) vertex
+  trailGeom = new THREE.BufferGeometry();
+  const dup = (src, k) => { const o = new Float32Array(src.length * 2); for (let i = 0; i < src.length / k; i++) for (let j = 0; j < k; j++) { o[i * 2 * k + j] = src[i * k + j]; o[i * 2 * k + k + j] = src[i * k + j]; } return o; };
+  const end = new Float32Array(D.n * 2); for (let i = 0; i < D.n; i++) end[i * 2 + 1] = 1;
+  trailGeom.setAttribute('position', new THREE.BufferAttribute(dup(pos, 3), 3));
+  trailGeom.setAttribute('aVel', new THREE.BufferAttribute(dup(vel, 3), 3));
+  trailGeom.setAttribute('aAbs', new THREE.BufferAttribute(dup(D.absmag, 1), 1));
+  trailGeom.setAttribute('aCi', new THREE.BufferAttribute(dup(D.ci, 1), 1));
+  trailGeom.setAttribute('aEnd', new THREE.BufferAttribute(end, 1));
+  trailGeom.setAttribute('aColor', new THREE.BufferAttribute(new Float32Array(D.n * 6), 3));
+  trails = new THREE.LineSegments(trailGeom, trailMat); trails.frustumCulled = false; trails.visible = S.trails && S.driftOn !== false;
+  scene.add(trails); scene.add(points);
+  D.dist = new Float32Array(D.n);
+  for (let i = 0; i < D.n; i++) D.dist[i] = Math.hypot(D.x[i], D.y[i], D.z[i]);
+  let maxD = 0; for (let i = 0; i < D.n; i++) if (D.dist[i] > maxD) maxD = D.dist[i];
+  D.maxD = maxD;
+  applyColors();
+}
+
+function applyColors() {
+  const col = geom.getAttribute('aColor').array;
+  const G = hex('#7fb2ff'), H = hex('#f0a35e');
+  for (let i = 0; i < D.n; i++) {
+    let c;
+    if (S.colorMode === 'temp') c = bvToRgb(bvOf(D.ci[i]));
+    else if (S.colorMode === 'src') c = D.gaia[i] > 0.5 ? G : H;
+    else c = distColor(D.dist[i]);
+    col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+  }
+  geom.getAttribute('aColor').needsUpdate = true;
+  const tc = trailGeom.getAttribute('aColor').array;
+  for (let i = 0; i < D.n; i++) for (let j = 0; j < 3; j++) { tc[i * 6 + j] = col[i * 3 + j]; tc[i * 6 + 3 + j] = col[i * 3 + j]; }
+  trailGeom.getAttribute('aColor').needsUpdate = true;
+  const L = $('legend');
+  if (S.colorMode === 'temp') L.innerHTML = `<div style="width:100%"><div class="ramp" style="background:linear-gradient(90deg,${[-0.3,0.0,0.4,0.8,1.2,1.8].map(b=>{const c=bvToRgb(b);return `rgb(${c.slice(0,3).map(v=>Math.round(v*255))})`}).join(',')})"></div><div style="display:flex;justify-content:space-between;margin-top:4px"><span>~20,000 K</span><span>Sun 5,800 K</span><span>~3,000 K</span></div></div>`;
+  else if (S.colorMode === 'src') L.innerHTML = D.isGaiaUpload ? `<span><i style="background:var(--gaia)"></i>All Gaia DR3 parallax</span>` : `<span><i style="background:var(--gaia)"></i>Gaia DR3 distance</span><span><i style="background:var(--hip)"></i>Hipparcos / other</span>`;
+  else L.innerHTML = `<div style="width:100%"><div class="ramp" style="background:linear-gradient(90deg,#f6d27a,#e0735a,#9a4fb8,#3f6fd8)"></div><div style="display:flex;justify-content:space-between;margin-top:4px"><span>1 pc</span><span>10</span><span>100</span><span>1 kpc</span></div></div>`;
+}
+
+// ---------- filters & stats ----------
+const distToSlider = (d) => 1000 * (Math.log10(d) - 0.5) / (Math.log10(Math.max(D ? D.maxD : 5000, 10)) - 0.5);
+const sliderToDist = (v) => v >= 1000 ? Infinity : Math.pow(10, 0.5 + v / 1000 * (Math.log10(Math.max(D ? D.maxD : 5000, 10)) - 0.5));
+function updateDist() {
+  S.maxDist = sliderToDist(+$('maxDist').value);
+  uniforms.uMaxDist.value = isFinite(S.maxDist) ? S.maxDist : 1e9;
+  $('maxDistOut').textContent = isFinite(S.maxDist) ? (S.maxDist < 1000 ? `${S.maxDist.toFixed(S.maxDist < 10 ? 1 : 0)} pc · ${fmt.format(Math.round(S.maxDist * PC_LY))} ly` : `${(S.maxDist / 1000).toFixed(2)} kpc`) : 'no limit';
+  scheduleHR();
+}
+function updateExposure() {
+  const v = +$('exposure').value; uniforms.uLimit.value = -2 + v / 100 * 16;
+  $('exposureOut').textContent = `mag ${uniforms.uLimit.value.toFixed(1)} limit`;
+}
+function updateFloor() { const v = +$('floor').value / 100; uniforms.uFloor.value = v; $('floorOut').textContent = `${Math.round(v * 100)}%`; }
+$('maxDist').addEventListener('input', updateDist);
+$('exposure').addEventListener('input', updateExposure);
+$('floor').addEventListener('input', updateFloor);
+$('colorMode').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.colorMode = b.dataset.m;
+  [...$('colorMode').children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  applyColors(); scheduleHR();
+});
+$('rotate').addEventListener('click', (e) => { S.rotate = !S.rotate; controls.autoRotate = S.rotate; e.target.setAttribute('aria-pressed', S.rotate); });
+$('gridBtn').addEventListener('click', (e) => { grid.visible = !grid.visible; e.target.setAttribute('aria-pressed', grid.visible); });
+
+function updateStat() {
+  let shown = 0, inBox = 0;
+  const b = S.box;
+  for (let i = 0; i < D.n; i++) {
+    if (D.dist[i] > S.maxDist) continue; shown++;
+    if (b && D.ci[i] >= b[0] && D.ci[i] <= b[1] && D.absmag[i] >= b[2] && D.absmag[i] <= b[3]) inBox++;
+  }
+  let gaiaN = 0; for (let i = 0; i < D.n; i++) gaiaN += D.gaia[i] > 0.5;
+  $('stat').innerHTML = `<b>${fmt.format(D.n)}</b> stars · <b>${Math.round(gaiaN / D.n * 100)}%</b> Gaia DR3 distances<br>${D.source}`;
+  $('hrCount').textContent = b ? `${fmt.format(inBox)} selected` : `${fmt.format(shown)} shown`;
+}
+
+// ---------- HR diagram ----------
+const hrc = $('hrc'), hctx = hrc.getContext('2d');
+const HR = { x0: -0.45, x1: 2.25, y0: -9, y1: 17, padL: 28, padB: 20, padT: 4, padR: 6 };
+let hrTimer = 0, hrImg = null;
+function scheduleHR() { clearTimeout(hrTimer); hrTimer = setTimeout(() => { drawHR(true); updateStat(); }, 60); }
+function hrSize() {
+  const r = hrc.getBoundingClientRect(), pr = Math.min(window.devicePixelRatio || 1, 2);
+  hrc.width = Math.round(r.width * pr); hrc.height = Math.round(r.height * pr); HR.pr = pr; HR.w = r.width; HR.h = r.height;
+}
+const hx = (ci) => HR.padL + (ci - HR.x0) / (HR.x1 - HR.x0) * (HR.w - HR.padL - HR.padR);
+const hy = (M) => HR.padT + (M - HR.y0) / (HR.y1 - HR.y0) * (HR.h - HR.padT - HR.padB);
+const hxi = (px) => HR.x0 + (px - HR.padL) / (HR.w - HR.padL - HR.padR) * (HR.x1 - HR.x0);
+const hyi = (py) => HR.y0 + (py - HR.padT) / (HR.h - HR.padT - HR.padB) * (HR.y1 - HR.y0);
+function drawHR(rebuild) {
+  if (!D || !HR.w) return;
+  const W = hrc.width, H = hrc.height, pr = HR.pr;
+  if (rebuild || !hrImg) {
+    const cnt = new Float32Array(W * H), r = new Float32Array(W * H), g = new Float32Array(W * H), bl = new Float32Array(W * H);
+    const col = geom.getAttribute('aColor').array;
+    for (let i = 0; i < D.n; i++) {
+      if (D.dist[i] > S.maxDist) continue;
+      const px = Math.round(hx(D.ci[i]) * pr), py = Math.round(hy(D.absmag[i]) * pr);
+      if (px < 0 || py < 0 || px >= W || py >= H) continue;
+      const k = py * W + px; cnt[k]++; r[k] += col[i * 3]; g[k] += col[i * 3 + 1]; bl[k] += col[i * 3 + 2];
+    }
+    hrImg = hctx.createImageData(W, H);
+    const d = hrImg.data;
+    for (let k = 0; k < W * H; k++) {
+      const c = cnt[k]; if (!c) continue;
+      const a = Math.min(1, 0.35 + Math.log2(1 + c) * 0.22);
+      d[k * 4] = r[k] / c * 255; d[k * 4 + 1] = g[k] / c * 255; d[k * 4 + 2] = bl[k] / c * 255; d[k * 4 + 3] = a * 255;
+    }
+  }
+  hctx.setTransform(1, 0, 0, 1, 0, 0);
+  hctx.clearRect(0, 0, W, H);
+  hctx.putImageData(hrImg, 0, 0);
+  hctx.setTransform(pr, 0, 0, pr, 0, 0);
+  const css = getComputedStyle(document.documentElement);
+  const muted = css.getPropertyValue('--muted').trim(), line = css.getPropertyValue('--line').trim(), foil = css.getPropertyValue('--foil').trim();
+  hctx.font = `10px ${css.getPropertyValue('--f-mono')}`; hctx.fillStyle = muted; hctx.strokeStyle = line; hctx.lineWidth = 1;
+  hctx.beginPath(); hctx.moveTo(HR.padL, HR.padT); hctx.lineTo(HR.padL, HR.h - HR.padB); hctx.lineTo(HR.w - HR.padR, HR.h - HR.padB); hctx.stroke();
+  hctx.textAlign = 'right'; hctx.textBaseline = 'middle';
+  [-5, 0, 5, 10, 15].forEach(M => { hctx.fillText(M, HR.padL - 5, hy(M)); });
+  hctx.textAlign = 'center'; hctx.textBaseline = 'top';
+  [0, 0.5, 1, 1.5, 2].forEach(c => hctx.fillText(c, hx(c), HR.h - HR.padB + 5));
+  hctx.textAlign = 'right'; hctx.fillText(D.ciLabel + ' →  redder', HR.w - HR.padR, HR.h - HR.padB - 13);
+  hctx.save(); hctx.translate(9, HR.padT + 2); hctx.rotate(-Math.PI / 2); hctx.textAlign = 'right'; hctx.fillText('', 0, 0); hctx.restore();
+  hctx.textAlign = 'left'; hctx.fillText(D.isGaiaUpload ? 'M_G  ↑ brighter' : 'M_V  ↑ brighter', HR.padL + 5, HR.padT + 2);
+  // annotations of real HR regions
+  hctx.fillStyle = muted; hctx.globalAlpha = 0.85; hctx.font = `italic 10px ${css.getPropertyValue('--f-body')}`;
+  if (!D.isGaiaUpload) { hctx.fillText('giants', hx(1.15), hy(-1.6)); hctx.fillText('white dwarfs', hx(-0.35), hy(13.2)); hctx.fillText('main sequence', hx(0.95), hy(9.0)); }
+  hctx.globalAlpha = 1;
+  if (S.box || HR.drag) {
+    const b = HR.drag || S.box;
+    const x0 = hx(b[0]), x1 = hx(b[1]), y0 = hy(b[2]), y1 = hy(b[3]);
+    hctx.strokeStyle = foil; hctx.fillStyle = 'rgba(216,180,106,0.08)'; hctx.lineWidth = 1.2;
+    hctx.fillRect(x0, y0, x1 - x0, y1 - y0); hctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  if (S.sel >= 0) {
+    const x = hx(D.ci[S.sel]), y = hy(D.absmag[S.sel]);
+    hctx.strokeStyle = foil; hctx.lineWidth = 1.5; hctx.beginPath(); hctx.arc(x, y, 5, 0, Math.PI * 2); hctx.stroke();
+  }
+}
+hrc.addEventListener('pointerdown', (e) => {
+  const r = hrc.getBoundingClientRect(); HR.start = [e.clientX - r.left, e.clientY - r.top]; hrc.setPointerCapture(e.pointerId);
+});
+hrc.addEventListener('pointermove', (e) => {
+  if (!HR.start) return;
+  const r = hrc.getBoundingClientRect(), p = [e.clientX - r.left, e.clientY - r.top];
+  const a = [hxi(HR.start[0]), hxi(p[0])].sort((m, n) => m - n), b = [hyi(HR.start[1]), hyi(p[1])].sort((m, n) => m - n);
+  HR.drag = [a[0], a[1], b[0], b[1]]; drawHR(false);
+});
+hrc.addEventListener('pointerup', () => {
+  if (HR.drag && (hx(HR.drag[1]) - hx(HR.drag[0]) > 4) && (hy(HR.drag[3]) - hy(HR.drag[2]) > 4)) setBox(HR.drag);
+  HR.start = null; HR.drag = null; drawHR(false);
+});
+function setBox(b) {
+  S.box = b;
+  if (b) uniforms.uBox.value.set(b[0], b[1], b[2], b[3]);
+  uniforms.uBoxOn.value = b ? 1 : 0;
+  $('clearBox').hidden = !b;
+  $('hrHint').textContent = b ? `${D.ciLabel} ${b[0].toFixed(2)}–${b[1].toFixed(2)}, M ${b[2].toFixed(1)} to ${b[3].toFixed(1)}` : 'Drag to select a region and isolate it in 3D';
+  updateStat(); drawHR(false);
+}
+$('clearBox').addEventListener('click', () => setBox(null));
+
+// ---------- picking & star card ----------
+const tmpM = new THREE.Matrix4();
+function pick(cx, cy) {
+  const rect = canvas.getBoundingClientRect();
+  tmpM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  const e = tmpM.elements, W = rect.width, H = rect.height, cp = camera.position;
+  let best = -1, bestScore = Infinity;
+  for (let i = 0; i < D.n; i++) {
+    if (D.dist[i] > S.maxDist) continue;
+    const x = PX(i), y = PY(i), z = PZ(i);
+    const w = e[3] * x + e[7] * y + e[11] * z + e[15]; if (w <= 0) continue;
+    const sx = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / w * 0.5 + 0.5) * W;
+    const sy = (1 - ((e[1] * x + e[5] * y + e[9] * z + e[13]) / w * 0.5 + 0.5)) * H;
+    const dpx = Math.hypot(sx - (cx - rect.left), sy - (cy - rect.top));
+    if (dpx > 12) continue;
+    const dc = Math.max(1e-4, Math.hypot(x - cp.x, y - cp.y, z - cp.z));
+    const m = D.absmag[i] + 5 * Math.log10(dc / 10);
+    const inBox = !S.box || (D.ci[i] >= S.box[0] && D.ci[i] <= S.box[1] && D.absmag[i] >= S.box[2] && D.absmag[i] <= S.box[3]);
+    const score = dpx * 0.6 + m * 0.5 + (inBox ? 0 : 50);
+    if (score < bestScore) { bestScore = score; best = i; }
+  }
+  return best;
+}
+function starName(i) {
+  const nm = D.names[i];
+  if (nm && nm[0]) return [nm[0], nm[1]];
+  if (nm && nm[1]) return [nm[1], ''];
+  if (D.hip && D.hip[i] > 0) return [`HIP ${D.hip[i]}`, ''];
+  if (D.sid) return [`Gaia DR3 ${D.sid[i]}`, ''];
+  return [i === 0 && !D.isGaiaUpload ? 'Sun' : `Star #${i}`, ''];
+}
+function galLB(i) {
+  const d = distNow(i); if (d === 0) return '–';
+  const x = D.x[i] + D.vx[i] * S.t, y = D.y[i] + D.vy[i] * S.t, z = D.z[i] + D.vz[i] * S.t;
+  const l = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360, b = Math.asin(z / d) * 180 / Math.PI;
+  return `${l.toFixed(2)}°, ${b >= 0 ? '+' : ''}${b.toFixed(2)}°`;
+}
+function select(i) {
+  if (i !== S.sel) S.spotDirty = true;
+  S.sel = i; uniforms.uSel.value = i; uniforms.uFocusOn.value = (S.spotOn && i >= 0) ? 1 : 0;
+  if (i < 0) { $('card').hidden = true; drawHR(false); return; }
+  const [name, alt] = starName(i);
+  $('cName').textContent = name;
+  const extra = [alt, D.hip && D.hip[i] > 0 && !name.startsWith('HIP') ? `HIP ${D.hip[i]}` : ''].filter(Boolean).join(' · ');
+  $('cAlt').textContent = extra || (D.isGaiaUpload ? 'From your Gaia query' : 'Catalogue star');
+  const d = distNow(i), bv = bvOf(D.ci[i]), T = bvToRgb(bv)[3];
+  const lum = Math.pow(10, -0.4 * (D.absmag[i] - (D.isGaiaUpload ? 4.67 : 4.83)));
+  const rows = [
+    ['Distance', d === 0 ? '0' : `${d < 100 ? d.toFixed(2) : fmt.format(Math.round(d))} pc`],
+    ['', d === 0 ? '8.3 light-minutes' : d < 1 ? `${fmt.format(Math.round(d * 206265))} AU` : `${fmt.format(+(d * PC_LY).toPrecision(4))} ly`],
+    [D.isGaiaUpload ? 'G mag (from Earth)' : 'V mag (from Earth)', (S.t && d > 0 ? D.absmag[i] + 5 * Math.log10(d / 10) : D.mag[i]).toFixed(2)],
+    ['Absolute mag', D.absmag[i].toFixed(2)],
+    ['Luminosity', `${lum >= 100 ? fmt.format(Math.round(lum)) : lum.toPrecision(2)} L☉`],
+    [D.ciLabel, D.ci[i].toFixed(3)],
+    ['Temperature (est.)', `${fmt.format(Math.round(T / 50) * 50)} K`],
+  ];
+  if (D.spectList && D.spectList[D.spect[i]]) rows.push(['Spectral type', D.spectList[D.spect[i]]]);
+  rows.push(['Galactic l, b', galLB(i)]);
+  if (S.t) rows.splice(2, 0, ['Distance today', `${D.dist[i] < 100 ? D.dist[i].toFixed(2) : fmt.format(Math.round(D.dist[i]))} pc`]);
+  const sp = Math.hypot(D.vx[i], D.vy[i], D.vz[i]) / KMS_PCMYR;
+  if (sp > 0) {
+    const rv = (D.x[i] * D.vx[i] + D.y[i] * D.vy[i] + D.z[i] * D.vz[i]) / Math.max(D.dist[i], 1e-9) / KMS_PCMYR;
+    rows.push(['Speed vs Sun', `${sp.toFixed(1)} km/s`]);
+    rows.push(['Radial velocity', D.hasrv && D.hasrv[i] > 0.5 ? `${rv >= 0 ? '+' : ''}${rv.toFixed(1)} km/s` : 'not measured']);
+    if (S.lane && S.lane.nodeOf.has(i)) rows.push(['Lanes', `${S.lane.adj[S.lane.nodeOf.get(i)].length} links`]);
+  }
+  if (S.route && S.route.target === i) rows.push(['Route', S.route.ok ? `${S.route.path.length - 1} jumps · ${S.route.len.toFixed(1)} pc` : 'no lane path']);
+  rows.push(['Distance from', D.gaia[i] > 0.5 ? '<span class="src-g">Gaia DR3 parallax</span>' : '<span class="src-h">Hipparcos / other</span>']);
+  $('cDl').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  $('routeRow').hidden = !S.lane;
+  if (S.lane) { $('setOrigin').textContent = S.origin === i ? 'Route start' : 'Set as route start'; $('setOrigin').disabled = S.origin === i; $('routeTo').disabled = S.origin === i || !S.lane.nodeOf.has(i); $('routeTo').textContent = S.lane.nodeOf.has(i) ? 'Route here' : 'Outside lane region'; }
+  $('card').hidden = false;
+  drawHR(false);
+}
+let down = null;
+canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY, performance.now()]; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!down || !D) return;
+  if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5 && performance.now() - down[2] < 400) select(pick(e.clientX, e.clientY));
+  down = null;
+});
+$('closeCard').addEventListener('click', () => select(-1));
+
+// ---------- camera moves ----------
+let tween = null;
+function flyTo(target, camPos, ms = 1400) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  tween = { t0: performance.now(), ms: reduce ? 1 : ms, fromT: controls.target.clone(), toT: target.clone(), fromC: camera.position.clone(), toC: camPos.clone() };
+}
+function stepTween(now) {
+  if (!tween) return;
+  let k = Math.min(1, (now - tween.t0) / tween.ms); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  controls.target.lerpVectors(tween.fromT, tween.toT, e);
+  // move camera in log-distance space so long flights don't overshoot
+  camera.position.lerpVectors(tween.fromC, tween.toC, e);
+  if (k >= 1) tween = null;
+}
+function flyToStar(i) {
+  const p = new THREE.Vector3(PX(i), PY(i), PZ(i));
+  const L = Math.pow(10, -0.4 * (D.absmag[i] - 4.83));
+  const viewD = Math.min(40, Math.max(0.05, 0.6 * Math.sqrt(L)));
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  flyTo(p, p.clone().add(dir.multiplyScalar(viewD)));
+}
+$('flyTo').addEventListener('click', () => { if (S.sel >= 0) flyToStar(S.sel); });
+$('homeBtn').addEventListener('click', () => { const o = sunPos(); flyTo(o, o.clone().add(new THREE.Vector3(-3, -5, 2.4))); });
+const sunPos = () => new THREE.Vector3(S.fv[0] * S.t, S.fv[1] * S.t, S.fv[2] * S.t);
+const VIEWS = {
+  near: () => flyTo(new THREE.Vector3(), new THREE.Vector3(-14, -22, 11)),
+  all: () => flyTo(new THREE.Vector3(), new THREE.Vector3(-2600, -3600, 2100)),
+  top: () => flyTo(new THREE.Vector3(), new THREE.Vector3(0.01, -0.01, 3200)),
+  edge: () => flyTo(new THREE.Vector3(), new THREE.Vector3(0, -3400, 40)),
+};
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => VIEWS[b.dataset.view]()));
+
+// ---------- search ----------
+let nameIndex = new Map();
+function buildNames() {
+  nameIndex = new Map(); const opts = [];
+  for (const k in D.names) {
+    const [a, b] = D.names[k];
+    if (a) { nameIndex.set(a.toLowerCase(), +k); opts.push(a); }
+    if (b) nameIndex.set(b.toLowerCase(), +k);
+  }
+  if (D.hip) nameIndex.hipLookup = true;
+  opts.sort();
+  $('names').innerHTML = opts.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+  D.proper = Object.keys(D.names).map(Number).filter(k => D.names[k][0]);
+}
+function doSearch() {
+  const q = $('search').value.trim().toLowerCase(); if (!q || !D) return;
+  let i = nameIndex.get(q);
+  if (i === undefined) { const m = q.match(/^hip\s*(\d+)$/); if (m && D.hip) { const h = +m[1]; i = D.hip.findIndex(v => v === h); if (i < 0) i = undefined; } }
+  if (i === undefined) { for (const [k, v] of nameIndex) if (k.startsWith(q)) { i = v; break; } }
+  if (i === undefined) { $('search').setCustomValidity('No star by that name in this catalogue'); $('search').reportValidity(); return; }
+  $('search').setCustomValidity('');
+  if (D.dist[i] > S.maxDist) { $('maxDist').value = 1000; updateDist(); }
+  select(i); flyToStar(i);
+}
+$('search').addEventListener('change', doSearch);
+$('search').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+$('search').addEventListener('input', () => $('search').setCustomValidity(''));
+
+// ---------- labels ----------
+const labelsEl = $('labels'); let labelTimer = 0;
+const v3 = new THREE.Vector3();
+function project(x, y, z, rect) {
+  v3.set(x, y, z).project(camera);
+  if (v3.z > 1 || v3.z < -1) return null;
+  return [(v3.x * 0.5 + 0.5) * rect.width, (1 - (v3.y * 0.5 + 0.5)) * rect.height];
+}
+// Labels run in two passes. chooseLabels() (throttled) decides which stars get a label and builds
+// their DOM nodes; placeLabels() (every frame) re-projects each one so it moves with its star.
+let labelSpecs = [];
+const labelNodes = new Map();
+const esc = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const starPos = (i) => () => [PX(i), PY(i), PZ(i)];
+function ringTagPos() {
+  const r = S.spotLy / PC_LY, up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).multiplyScalar(r);
+  return [PX(S.sel) + up.x, PY(S.sel) + up.y, PZ(S.sel) + up.z];
+}
+function chooseLabels() {
+  if (!D) return;
+  const rect = canvas.getBoundingClientRect(), cp = camera.position, specs = [];
+  const taken = []; // overlap avoidance in screen space, judged at selection time
+  const free = (x, y, w) => { for (const t of taken) if (Math.abs(t[1] - y) < 13 && x < t[0] + t[2] + 6 && t[0] < x + w + 6) return false; taken.push([x, y, w]); return true; };
+  const onScreen = (p) => p && p[0] >= 0 && p[1] >= 0 && p[0] <= rect.width && p[1] <= rect.height;
+  const add = (key, pos, html, cls, opts = {}) => specs.push({ key, pos, html, cls, center: !!opts.center, dy: opts.dy || 0, op: opts.op });
+  // the selected star and route start always get labels first
+  if (S.sel >= 0) { const p = project(PX(S.sel), PY(S.sel), PZ(S.sel), rect); const t = starName(S.sel)[0]; if (onScreen(p)) free(p[0] + 8, p[1], t.length * 6.5); add('sel' + S.sel, starPos(S.sel), esc(t), 'lbl sel'); }
+  if (S.route && S.route.ok) { const i = S.route.path[0]; if (i !== S.sel) { const p = project(PX(i), PY(i), PZ(i), rect); const t = `${starName(i)[0]} · origin`; if (onScreen(p)) free(p[0] + 8, p[1], t.length * 6.5); add('org' + i, starPos(i), esc(t), 'lbl sel'); } }
+  const members = spotMembers();
+  // the Sun is always labelled on the built-in map, so you can find home from anywhere
+  const pinSun = !D.isGaiaUpload && S.sel !== 0 && D.dist[0] <= S.maxDist;
+  if (pinSun) {
+    const p = project(PX(0), PY(0), PZ(0), rect), m = members && members.find(x => x[1] === 0);
+    const dl = m ? `<span class="d">${fmtLy(m[0] * PC_LY)}</span>` : '';
+    if (onScreen(p)) free(p[0] + 8, p[1], 30 + (m ? 50 : 0));
+    add('sun', starPos(0), `Sol${dl}`, 'lbl sel');
+  }
+  if (members) {
+    // inside the spotlight: label as many stars as fit, brightest-looking first, with distance from the selected star
+    const cand = members.map(([d, i]) => { const dc = Math.max(1e-4, Math.hypot(PX(i) - cp.x, PY(i) - cp.y, PZ(i) - cp.z)); return [D.absmag[i] + 5 * Math.log10(dc / 10), i, d]; });
+    cand.sort((a, b) => a[0] - b[0]);
+    let n = 0;
+    for (const [, i, d] of cand) {
+      if (n >= 40) break; if (pinSun && i === 0) continue;
+      const p = project(PX(i), PY(i), PZ(i), rect); if (!onScreen(p)) continue;
+      const nm = starName(i)[0], dl = fmtLy(d * PC_LY);
+      if (!free(p[0] + 8, p[1], (nm.length + dl.length) * 6.2 + 8)) continue;
+      add('n' + i, starPos(i), `${esc(nm)}<span class="d">${dl}</span>`, 'lbl near'); n++;
+    }
+    let near = null; for (const m of members) if (!near || m[0] < near[0]) near = m;
+    $('spotStat').innerHTML = `<b>${fmt.format(members.length)}</b> star${members.length === 1 ? '' : 's'} within ${fmtLy(S.spotLy)}${near ? ` · nearest <b>${esc(starName(near[1])[0])}</b> at ${fmtLy(near[0] * PC_LY)}` : ''}`;
+    add('ringtag', ringTagPos, fmtLy(S.spotLy), 'lbl gc', { center: true, dy: -10 });
+  } else {
+    if (S.sel >= 0) $('spotStat').textContent = S.spotOn ? '' : 'Spotlight off';
+    const cand = [];
+    for (const i of D.proper || []) {
+      if (D.dist[i] > S.maxDist) continue;
+      const dc = Math.max(1e-4, Math.hypot(PX(i) - cp.x, PY(i) - cp.y, PZ(i) - cp.z));
+      const m = D.absmag[i] + 5 * Math.log10(dc / 10);
+      if (m > uniforms.uLimit.value - 3.5) continue;
+      cand.push([m, i]);
+    }
+    cand.sort((a, b) => a[0] - b[0]);
+    let n = 0;
+    for (const [, i] of cand) {
+      if (n >= 16) break; if (i === S.sel || (pinSun && i === 0)) continue;
+      const p = project(PX(i), PY(i), PZ(i), rect); if (!onScreen(p)) continue;
+      if (!free(p[0] + 8, p[1], D.names[i][0].length * 6.5)) continue;
+      add('p' + i, starPos(i), esc(D.names[i][0]), 'lbl'); n++;
+    }
+  }
+  if (grid.visible) {
+    add('gc', () => [6000, 0, 0], '→ Galactic centre, 8.2 kpc', 'lbl gc');
+    RING_LABELS.forEach((r, k) => add('ring' + k, () => [r.p.x, r.p.y, r.p.z], r.t, 'lbl gc', { op: 0.7 }));
+  }
+  // reconcile DOM: keep nodes whose key survives, so a label never blinks while it stays chosen
+  const keep = new Set();
+  for (const sp of specs) {
+    keep.add(sp.key);
+    let el = labelNodes.get(sp.key);
+    if (!el) { el = document.createElement('div'); labelNodes.set(sp.key, el); labelsEl.appendChild(el); }
+    if (el._html !== sp.html) { el.innerHTML = sp.html; el._html = sp.html; }
+    if (el.className !== sp.cls) el.className = sp.cls;
+    el.style.opacity = sp.op != null ? sp.op : '';
+    sp.el = el;
+  }
+  for (const [k, el] of labelNodes) if (!keep.has(k)) { el.remove(); labelNodes.delete(k); }
+  labelSpecs = specs;
+  placeLabels();
+}
+let labelRect = null;
+function placeLabels() {
+  if (!labelSpecs.length) return;
+  const rect = labelRect || (labelRect = canvas.getBoundingClientRect());
+  for (const sp of labelSpecs) {
+    const q = sp.pos(), p = project(q[0], q[1], q[2], rect);
+    if (!p || p[0] < -200 || p[1] < -50 || p[0] > rect.width + 50 || p[1] > rect.height + 50) { if (sp.el.style.visibility !== 'hidden') sp.el.style.visibility = 'hidden'; continue; }
+    if (sp.el.style.visibility) sp.el.style.visibility = '';
+    const x = p[0] + (sp.center ? 0 : 8), y = p[1] + sp.dy;
+    sp.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(${sp.center ? '-50%' : '0'}, -50%)`;
+  }
+}
+
+// ---------- render loop ----------
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); labelRect = null;
+  hrSize(); drawHR(true);
+}
+window.addEventListener('resize', resize);
+let lastNow = 0, anchorPrev = null;
+function anchorIndex() { if (S.follow && S.sel >= 0) return S.sel; return (!D.isGaiaUpload && S.frame === 'lsr') ? 0 : -1; }
+function frame(now) {
+  const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0; lastNow = now;
+  if (S.playing && D) {
+    let t = S.t + S.speed * dt;
+    if (t >= 5 || t <= -5) { t = Math.max(-5, Math.min(5, t)); setPlaying(false); }
+    setTime(t, true);
+  }
+  // keep the followed star (or the drifting Sun) fixed on screen
+  const ai = D ? anchorIndex() : -1;
+  if (ai >= 0) {
+    const cur = [PX(ai), PY(ai), PZ(ai)];
+    if (anchorPrev && anchorPrev[3] === ai && !tween) {
+      const dx = cur[0] - anchorPrev[0], dy = cur[1] - anchorPrev[1], dz = cur[2] - anchorPrev[2];
+      camera.position.x += dx; camera.position.y += dy; camera.position.z += dz;
+      controls.target.x += dx; controls.target.y += dy; controls.target.z += dz;
+    }
+    anchorPrev = [cur[0], cur[1], cur[2], ai];
+  } else anchorPrev = null;
+  stepTween(now); controls.update(); updateFocus(); renderer.render(scene, camera);
+  if (now - labelTimer > 150) { labelTimer = now; chooseLabels(); if (S.cardDirty && S.sel >= 0) { S.cardDirty = false; select(S.sel); } }
+  else placeLabels(); // same camera matrices the frame was just rendered with
+  requestAnimationFrame(frame);
+}
+
+function useData(data) {
+  D = data; S.sel = -1; uniforms.uSel.value = -1; $('card').hidden = true;
+  S.route = null; S.origin = D.isGaiaUpload ? nearestToSun() : 0;
+  buildGeometry(); buildNames(); setBox(null);
+  if (!S.distInit) { S.distInit = true; $('maxDist').value = Math.round(distToSlider(40 / PC_LY)); }
+  updateDist(); updateStat(); drawHR(true);
+  $('g710').hidden = D.isGaiaUpload;
+  setTime(0); if (S.lanesOn) buildLanes(); else clearLanes();
+}
+function nearestToSun() { let b = 0; for (let i = 1; i < D.n; i++) if (D.dist[i] < D.dist[b]) b = i; return b; }
+
+// ---------- built-in dataset ----------
+// stars.bin is the raw float32 table; stars.b64.txt is the same bytes as base64 text,
+// used where binary files can't be served (the claude.ai artifact host).
+async function loadStarBuffer() {
+  try { const r = await fetch('stars.bin'); if (r.ok) return await r.arrayBuffer(); } catch (e) {}
+  const r = await fetch('stars.b64.txt'); if (!r.ok) throw new Error('star file ' + r.status);
+  const t = (await r.text()).trim(), s = atob(t), u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u.buffer;
+}
+async function loadBuiltin() {
+  const [bin, meta] = await Promise.all([loadStarBuffer(), fetch('meta.json').then(r => r.json())]);
+  const n = meta.n, col = (k) => new Float32Array(bin, k * n * 4, n);
+  builtin = { n, x: col(0), y: col(1), z: col(2), mag: col(3), absmag: col(4), ci: col(5), hip: col(6), gaia: col(7), spect: col(8),
+    vx: col(9), vy: col(10), vz: col(11), hasrv: col(12), spectList: meta.spect, names: meta.names, ciLabel: 'B−V', isGaiaUpload: false, source: 'AT-HYG v3.2 · Hipparcos/Tycho stars with Gaia DR3 distances' };
+  useData(builtin);
+}
+
+// ---------- user CSV from the Gaia Archive ----------
+const EQ2GAL = [[-0.0548755604, -0.8734370902, -0.4838350155], [0.4941094279, -0.4448296300, 0.7469822445], [-0.8676661490, -0.1980763734, 0.4559837762]];
+function parseGaiaCSV(text, fname) {
+  const lines = text.split(/\r?\n/).filter(l => l && l[0] !== '#');
+  const head = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+  const need = ['ra', 'dec', 'parallax', 'phot_g_mean_mag'];
+  const miss = need.filter(c => !head.includes(c));
+  if (miss.length) throw new Error(`This CSV is missing the column${miss.length > 1 ? 's' : ''} ${miss.join(', ')}. Use the query above, or include those columns in yours.`);
+  const ci = (c) => head.indexOf(c);
+  const iRa = ci('ra'), iDec = ci('dec'), iPlx = ci('parallax'), iG = ci('phot_g_mean_mag'), iBr = ci('bp_rp'), iId = ci('source_id');
+  const iPa = ci('pmra'), iPd = ci('pmdec'), iRv = ci('radial_velocity');
+  const N = lines.length - 1;
+  const out = { vx: new Float32Array(N), vy: new Float32Array(N), vz: new Float32Array(N), hasrv: new Float32Array(N), x: new Float32Array(N), y: new Float32Array(N), z: new Float32Array(N), mag: new Float32Array(N), absmag: new Float32Array(N), ci: new Float32Array(N), gaia: new Float32Array(N).fill(1), sid: [] };
+  let n = 0;
+  for (let li = 1; li < lines.length; li++) {
+    const f = lines[li].split(',');
+    const plx = parseFloat(f[iPlx]), g = parseFloat(f[iG]), ra = parseFloat(f[iRa]) * Math.PI / 180, dec = parseFloat(f[iDec]) * Math.PI / 180;
+    if (!(plx > 0) || !isFinite(g) || !isFinite(ra) || !isFinite(dec)) continue;
+    const d = 1000 / plx, cd = Math.cos(dec);
+    const ex = d * cd * Math.cos(ra), ey = d * cd * Math.sin(ra), ez = d * Math.sin(dec);
+    out.x[n] = EQ2GAL[0][0] * ex + EQ2GAL[0][1] * ey + EQ2GAL[0][2] * ez;
+    out.y[n] = EQ2GAL[1][0] * ex + EQ2GAL[1][1] * ey + EQ2GAL[1][2] * ez;
+    out.z[n] = EQ2GAL[2][0] * ex + EQ2GAL[2][1] * ey + EQ2GAL[2][2] * ez;
+    const pa = iPa >= 0 ? parseFloat(f[iPa]) : NaN, pd = iPd >= 0 ? parseFloat(f[iPd]) : NaN, rv = iRv >= 0 ? parseFloat(f[iRv]) : NaN;
+    if (isFinite(pa) && isFinite(pd)) {
+      const k = 4.74047 / plx, va = pa * k, vd = pd * k, vr = isFinite(rv) ? rv : 0;
+      const sr = Math.sin(ra), cr = Math.cos(ra), sd = Math.sin(dec);
+      const wx = (vr * cd * cr - va * sr - vd * sd * cr) * KMS_PCMYR, wy = (vr * cd * sr + va * cr - vd * sd * sr) * KMS_PCMYR, wz = (vr * sd + vd * cd) * KMS_PCMYR;
+      out.vx[n] = EQ2GAL[0][0] * wx + EQ2GAL[0][1] * wy + EQ2GAL[0][2] * wz;
+      out.vy[n] = EQ2GAL[1][0] * wx + EQ2GAL[1][1] * wy + EQ2GAL[1][2] * wz;
+      out.vz[n] = EQ2GAL[2][0] * wx + EQ2GAL[2][1] * wy + EQ2GAL[2][2] * wz;
+      out.hasrv[n] = isFinite(rv) ? 1 : 0;
+    }
+    out.mag[n] = g; out.absmag[n] = g + 5 * Math.log10(plx) - 10;
+    const br = iBr >= 0 ? parseFloat(f[iBr]) : NaN; out.ci[n] = isFinite(br) ? br : 0.82;
+    out.sid.push(iId >= 0 ? f[iId] : ''); n++;
+  }
+  if (!n) throw new Error('No rows with a positive parallax were found in this file.');
+  const sl = (a) => a.subarray(0, n);
+  return { n, vx: sl(out.vx), vy: sl(out.vy), vz: sl(out.vz), hasrv: sl(out.hasrv), x: sl(out.x), y: sl(out.y), z: sl(out.z), mag: sl(out.mag), absmag: sl(out.absmag), ci: sl(out.ci), gaia: sl(out.gaia), sid: out.sid,
+    hip: null, spect: null, spectList: null, names: {}, ciLabel: 'BP−RP', isGaiaUpload: true, source: `Your file: ${fname}` };
+}
+async function loadFile(file) {
+  try {
+    $('loading').hidden = false; $('loading').textContent = `Reading ${file.name}…`;
+    const data = parseGaiaCSV(await file.text(), file.name);
+    useData(data); $('reset').hidden = false; $('maxDist').value = 1000; updateDist();
+    const far = Math.min(4000, D.maxD * 1.6); flyTo(new THREE.Vector3(), new THREE.Vector3(-far * 0.6, -far * 0.8, far * 0.5));
+    $('loading').hidden = true;
+  } catch (err) {
+    $('loading').hidden = false; $('loading').textContent = err.message;
+    setTimeout(() => { $('loading').hidden = true; }, 6000);
+  }
+}
+$('file').addEventListener('change', (e) => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+$('reset').addEventListener('click', () => { useData(builtin); $('reset').hidden = true; VIEWS.near(); });
+let dragDepth = 0;
+window.addEventListener('dragenter', (e) => { if ([...e.dataTransfer.types].includes('Files')) { dragDepth++; $('drop').hidden = false; } });
+window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('drop').hidden = true; } });
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; $('drop').hidden = true; const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+$('copyAdql').addEventListener('click', async (e) => {
+  const t = $('adql').textContent;
+  try { await navigator.clipboard.writeText(t); e.target.textContent = 'Copied'; }
+  catch { const r = document.createRange(); r.selectNodeContents($('adql')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); e.target.textContent = 'Selected, press Ctrl+C'; }
+  setTimeout(() => { e.target.textContent = 'Copy query'; }, 2200);
+});
+
+
+// ---------- time ----------
+const tToSlider = (t) => Math.sign(t) * 1000 * Math.sqrt(Math.abs(t) / 5);
+const sliderToT = (v) => Math.sign(v) * 5 * Math.pow(Math.abs(v) / 1000, 2);
+function fmtSpan(t) {
+  const y = Math.abs(t) * 1e6, sg = t > 0 ? '+' : '−';
+  if (y < 1) return 'Today';
+  if (y < 1000) return `${sg}${fmt.format(Math.round(y))} yr`;
+  if (y < 1e6) return `${sg}${(y / 1000).toFixed(y < 1e4 ? 2 : 1)} kyr`;
+  return `${sg}${(y / 1e6).toFixed(3)} Myr`;
+}
+function setTime(t, fromPlay) {
+  S.t = Math.abs(t) * 1e6 < 0.5 ? 0 : t;
+  uniforms.uT.value = S.t;
+  if (document.activeElement !== $('time') || fromPlay) $('time').value = Math.round(tToSlider(S.t));
+  $('tRead').textContent = fmtSpan(S.t);
+  const yr = 2016 + S.t * 1e6;
+  const cal = S.t === 0 ? 'Gaia epoch J2016' : Math.abs(S.t) < 0.5 ? (yr >= 1 ? `AD ${fmt.format(Math.round(yr))}` : `${fmt.format(Math.round(1 - yr))} BC`) : `${fmt.format(Math.round(Math.abs(S.t) * 1e6))} years ${S.t > 0 ? 'from now' : 'ago'}`;
+  $('tSub').textContent = `${cal} · ${S.frame === 'lsr' ? 'galactic rest frame, Sun drifting' : 'positions relative to the Sun'}`;
+  if (S.driftOn === false) { $('tRead').textContent = 'Drift off'; $('tSub').textContent = 'Stars fixed at their measured J2016 positions'; }
+  S.cardDirty = true;
+  if (S.lanesOn && !S.playing) scheduleLanes();
+}
+function setPlaying(on) {
+  S.playing = on;
+  $('playIcon').setAttribute('d', on ? 'M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z' : 'M4 2.5v11l9-5.5z');
+  $('play').setAttribute('aria-label', on ? 'Pause' : 'Play');
+  if (!on && S.lanesOn) scheduleLanes();
+}
+function setTrailLen() { uniforms.uTrail.value = Math.max(0.02, S.speed * 3); }
+$('play').addEventListener('click', () => {
+  if (!S.playing && Math.abs(S.t) >= 5) setTime(S.t > 0 ? -5 : 0);
+  setPlaying(!S.playing);
+});
+$('time').addEventListener('input', () => { setTime(sliderToT(+$('time').value)); });
+$('speed').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.speed = +b.dataset.s; [...$('speed').children].forEach(x => x.setAttribute('aria-pressed', x === b)); setTrailLen();
+});
+$('frame').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.frame = b.dataset.f; S.fv = S.frame === 'lsr' ? SUN_LSR.slice() : [0, 0, 0];
+  uniforms.uFrame.value.set(S.fv[0], S.fv[1], S.fv[2]);
+  [...$('frame').children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  anchorPrev = null; setTime(S.t);
+});
+$('trails').addEventListener('click', (e) => { S.trails = !S.trails; if (trails) trails.visible = S.trails && S.driftOn; e.target.setAttribute('aria-pressed', S.trails); });
+$('now').addEventListener('click', () => { setPlaying(false); setTime(0); });
+$('follow').addEventListener('click', (e) => { S.follow = !S.follow; anchorPrev = null; e.target.setAttribute('aria-pressed', S.follow); e.target.textContent = S.follow ? 'Following' : 'Follow'; });
+$('g710').addEventListener('click', () => {
+  const i = nameIndex.get('gl 710'); if (i === undefined) return;
+  setDrift(true); setPlaying(false);
+  $('frame').querySelector('[data-f=sun]').click();
+  $('speed').querySelector('[data-s="0.001"]').click();
+  if (S.follow) $('follow').click();
+  $('maxDist').value = 1000; updateDist();
+  setTime(1.21);
+  select(i);
+  flyTo(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.25, -0.45, 0.2), 1600);
+  setTimeout(() => setPlaying(true), 1700);
+});
+
+
+// ---------- drift on/off ----------
+S.driftOn = true;
+function setDrift(on, quiet) {
+  if (on === S.driftOn) return;
+  S.driftOn = on;
+  const b = $('driftBtn'); b.setAttribute('aria-pressed', on); b.textContent = on ? 'Drift on' : 'Drift off';
+  $('timebar').classList.toggle('off', !on);
+  if (!on) {
+    setPlaying(false); S.savedT = S.t; setTime(0);
+    $('tRead').textContent = 'Drift off'; $('tSub').textContent = 'Stars fixed at their measured J2016 positions';
+  } else setTime(S.savedT || 0);
+  if (trails) trails.visible = on && S.trails;
+  anchorPrev = null;
+  if (!quiet) { try { localStorage.setItem('gaia-atlas-drift', on ? '1' : '0'); } catch (e) {} }
+}
+$('driftBtn').addEventListener('click', () => setDrift(!S.driftOn));
+
+
+// ---------- spotlight around the selected star ----------
+S.spotOn = true; S.spotLy = 25;
+const spotLyFromSlider = (v) => 10 * Math.pow(10, v / 1000 * 2.5);
+function fmtLy(ly) { return ly < 100 ? `${ly.toFixed(ly < 20 ? 1 : 0)} ly` : `${fmt.format(Math.round(ly))} ly`; }
+function updateSpot() {
+  S.spotLy = spotLyFromSlider(+$('spotR').value);
+  uniforms.uFocusR.value = S.spotLy / PC_LY;
+  $('spotROut').textContent = `${fmtLy(S.spotLy)} · ${(S.spotLy / PC_LY).toFixed(S.spotLy < 33 ? 1 : 0)} pc`;
+  uniforms.uFocusOn.value = (S.spotOn && S.sel >= 0) ? 1 : 0;
+  S.spotDirty = true;
+}
+$('spotR').addEventListener('input', updateSpot);
+$('spotBtn').addEventListener('click', (e) => { S.spotOn = !S.spotOn; e.target.setAttribute('aria-pressed', S.spotOn); e.target.textContent = S.spotOn ? 'On' : 'Off'; $('spotR').disabled = !S.spotOn; updateSpot(); });
+// stars inside the spotlight, sorted by distance from the selected star
+function spotMembers() {
+  if (!(S.spotOn && S.sel >= 0)) return null;
+  const R = S.spotLy / PC_LY, R2 = R * R, fx = PX(S.sel), fy = PY(S.sel), fz = PZ(S.sel), out = [];
+  for (let i = 0; i < D.n; i++) {
+    if (i === S.sel || D.dist[i] > S.maxDist) continue;
+    const dx = PX(i) - fx; if (dx > R || dx < -R) continue;
+    const dy = PY(i) - fy; if (dy > R || dy < -R) continue;
+    const dz = PZ(i) - fz, d2 = dx * dx + dy * dy + dz * dz;
+    if (d2 <= R2) out.push([Math.sqrt(d2), i]);
+  }
+  return out;
+}
+function updateFocus() {
+  const on = S.spotOn && S.sel >= 0 && D;
+  uniforms.uFocusOn.value = on ? 1 : 0;
+  focusRing.visible = !!on;
+  if (!on) return;
+  const fx = PX(S.sel), fy = PY(S.sel), fz = PZ(S.sel);
+  uniforms.uFocus.value.set(fx, fy, fz);
+  focusRing.position.set(fx, fy, fz);
+  focusRing.quaternion.copy(camera.quaternion);
+  const r = S.spotLy / PC_LY; focusRing.scale.set(r, r, r);
+}
+
+// ---------- star lanes ----------
+let laneTimer = 0;
+function scheduleLanes() { clearTimeout(laneTimer); laneTimer = setTimeout(buildLanes, 220); }
+function clearLanes() { if (lanes) { scene.remove(lanes); laneGeom.dispose(); lanes = null; } S.lane = null; S.route = null; }
+function laneParams() {
+  const R = +$('laneR').value / PC_LY, J = +$('laneJ').value / 10, K = +$('laneK').querySelector('[aria-pressed=true]').dataset.k;
+  $('laneROut').textContent = `${$('laneR').value} ly · ${R.toFixed(1)} pc`;
+  $('laneJOut').textContent = `${J.toFixed(1)} pc · ${(J * PC_LY).toFixed(1)} ly`;
+  return { R, J, K };
+}
+function buildLanes() {
+  if (!D || !S.lanesOn) return;
+  const { R, J, K } = laneParams();
+  const t = S.t;
+  // heliocentric positions at the current time
+  const nodes = [], nodeOf = new Map();
+  for (let i = 0; i < D.n; i++) {
+    const x = D.x[i] + D.vx[i] * t, y = D.y[i] + D.vy[i] * t, z = D.z[i] + D.vz[i] * t;
+    if (x * x + y * y + z * z <= R * R) { nodeOf.set(i, nodes.length); nodes.push(i); }
+  }
+  const N = nodes.length, P = new Float64Array(N * 3);
+  nodes.forEach((i, k) => { P[k * 3] = D.x[i] + D.vx[i] * t; P[k * 3 + 1] = D.y[i] + D.vy[i] * t; P[k * 3 + 2] = D.z[i] + D.vz[i] * t; });
+  const cell = new Map(), key = (a, b, c) => a + ',' + b + ',' + c;
+  for (let k = 0; k < N; k++) { const kk = key(Math.floor(P[k * 3] / J), Math.floor(P[k * 3 + 1] / J), Math.floor(P[k * 3 + 2] / J)); (cell.get(kk) || cell.set(kk, []).get(kk)).push(k); }
+  const edgeSet = new Map();
+  for (let k = 0; k < N; k++) {
+    const cx = Math.floor(P[k * 3] / J), cy = Math.floor(P[k * 3 + 1] / J), cz = Math.floor(P[k * 3 + 2] / J), cand = [];
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) {
+      const list = cell.get(key(cx + a, cy + b, cz + c)); if (!list) continue;
+      for (const m of list) { if (m === k) continue; const d = Math.hypot(P[k * 3] - P[m * 3], P[k * 3 + 1] - P[m * 3 + 1], P[k * 3 + 2] - P[m * 3 + 2]); if (d <= J && d > 0) cand.push([d, m]); }
+    }
+    cand.sort((u, v) => u[0] - v[0]);
+    for (let q = 0; q < Math.min(K, cand.length); q++) { const m = cand[q][1], a = Math.min(k, m), b = Math.max(k, m); edgeSet.set(a * N + b, cand[q][0]); }
+  }
+  const edges = [], adj = Array.from({ length: N }, () => []);
+  for (const [code, d] of edgeSet) { const a = Math.floor(code / N), b = code % N; edges.push([a, b, d]); adj[a].push([b, d]); adj[b].push([a, d]); }
+  // connected components
+  const comp = new Int32Array(N).fill(-1); let nc = 0, biggest = 0;
+  for (let k = 0; k < N; k++) {
+    if (comp[k] >= 0) continue; let size = 0; const st = [k]; comp[k] = nc;
+    while (st.length) { const u = st.pop(); size++; for (const [v] of adj[u]) if (comp[v] < 0) { comp[v] = nc; st.push(v); } }
+    if (size > biggest) biggest = size; nc++;
+  }
+  S.lane = { nodes, nodeOf, edges, adj, comp, R, J, K, t };
+  // geometry
+  if (lanes) { scene.remove(lanes); laneGeom.dispose(); }
+  laneGeom = new THREE.BufferGeometry();
+  const M = edges.length, pos = new Float32Array(M * 6), vel = new Float32Array(M * 6), hi = new Float32Array(M * 2);
+  edges.forEach(([a, b], e) => {
+    for (const [o, k] of [[0, a], [3, b]]) { const i = nodes[k]; pos[e * 6 + o] = D.x[i]; pos[e * 6 + o + 1] = D.y[i]; pos[e * 6 + o + 2] = D.z[i]; vel[e * 6 + o] = D.vx[i]; vel[e * 6 + o + 1] = D.vy[i]; vel[e * 6 + o + 2] = D.vz[i]; }
+  });
+  laneGeom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  laneGeom.setAttribute('aVel', new THREE.BufferAttribute(vel, 3));
+  laneGeom.setAttribute('aHi', new THREE.BufferAttribute(hi, 1));
+  lanes = new THREE.LineSegments(laneGeom, laneMat); lanes.frustumCulled = false; scene.add(lanes);
+  $('laneStat').innerHTML = `<b>${fmt.format(N)}</b> stars · <b>${fmt.format(M)}</b> lanes<br><b>${nc}</b> cluster${nc === 1 ? '' : 's'} · largest holds <b>${Math.round(biggest / Math.max(N, 1) * 100)}%</b>`;
+  if (S.route) routeTo(S.route.target, true);
+  if (S.sel >= 0) S.cardDirty = true;
+}
+function routeTo(target, quiet) {
+  const L = S.lane; if (!L) return;
+  const s0 = L.nodeOf.get(S.origin), g = L.nodeOf.get(target);
+  const hi = laneGeom.getAttribute('aHi'); hi.array.fill(0);
+  let res = { target, ok: false, path: [], len: 0 };
+  if (s0 !== undefined && g !== undefined) {
+    const N = L.nodes.length, dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), heap = [[0, s0]];
+    dist[s0] = 0;
+    const push = (it) => { heap.push(it); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let c = 0; for (;;) { const l = 2 * c + 1, r = l + 1; let m = c; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === c) break; [heap[m], heap[c]] = [heap[c], heap[m]]; c = m; } } return top; };
+    heap.length = 0; push([0, s0]);
+    while (heap.length) { const [d, u] = pop(); if (d > dist[u]) continue; if (u === g) break; for (const [v, w] of L.adj[u]) if (d + w < dist[v]) { dist[v] = d + w; prev[v] = u; push([dist[v], v]); } }
+    if (isFinite(dist[g])) {
+      const path = []; for (let u = g; u >= 0; u = prev[u]) path.unshift(u);
+      const onPath = new Set(); for (let q = 1; q < path.length; q++) { const a = Math.min(path[q - 1], path[q]), b = Math.max(path[q - 1], path[q]); onPath.add(a + ',' + b); }
+      L.edges.forEach(([a, b], e) => { if (onPath.has(a + ',' + b)) { hi.array[e * 2] = 1; hi.array[e * 2 + 1] = 1; } });
+      res = { target, ok: true, path: path.map(k => L.nodes[k]), len: dist[g] };
+    }
+  }
+  hi.needsUpdate = true; S.route = res;
+  if (!quiet && S.sel >= 0) select(S.sel);
+}
+$('lanesBtn').addEventListener('click', (e) => {
+  S.lanesOn = !S.lanesOn; e.target.setAttribute('aria-pressed', S.lanesOn); e.target.textContent = S.lanesOn ? 'Hide lanes' : 'Show lanes';
+  $('laneOpts').hidden = !S.lanesOn;
+  if (S.lanesOn) { buildLanes(); const d = camera.position.distanceTo(controls.target); if (d > 200) VIEWS.lanes(); } else clearLanes();
+  if (S.sel >= 0) select(S.sel);
+});
+['laneR', 'laneJ'].forEach(id => $(id).addEventListener('input', () => { laneParams(); scheduleLanes(); }));
+$('laneK').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; [...$('laneK').children].forEach(x => x.setAttribute('aria-pressed', x === b)); scheduleLanes(); });
+$('routeTo').addEventListener('click', () => { if (S.sel >= 0) routeTo(S.sel); });
+$('setOrigin').addEventListener('click', () => { if (S.sel < 0) return; S.origin = S.sel; if (S.route) routeTo(S.route.target); else select(S.sel); });
+function graphJSON() {
+  const L = S.lane;
+  const stars = L.nodes.map((i, k) => {
+    const nm = starName(i);
+    const o = { id: k, name: nm[0], x: +(D.x[i] + D.vx[i] * L.t).toFixed(4), y: +(D.y[i] + D.vy[i] * L.t).toFixed(4), z: +(D.z[i] + D.vz[i] * L.t).toFixed(4),
+      vx: +(D.vx[i] / KMS_PCMYR).toFixed(2), vy: +(D.vy[i] / KMS_PCMYR).toFixed(2), vz: +(D.vz[i] / KMS_PCMYR).toFixed(2),
+      absmag: +D.absmag[i].toFixed(2), tempK: Math.round(bvToRgb(bvOf(D.ci[i]))[3] / 10) * 10, cluster: L.comp[k] };
+    if (nm[1]) o.alias = nm[1];
+    if (D.hip && D.hip[i] > 0) o.hip = D.hip[i];
+    if (D.sid) o.gaia_dr3 = D.sid[i];
+    if (D.spectList && D.spectList[D.spect[i]]) o.spect = D.spectList[D.spect[i]];
+    return o;
+  });
+  return JSON.stringify({
+    meta: { source: D.source, units: { position: 'parsec', velocity: 'km/s' }, frame: 'heliocentric galactic: +x toward galactic centre, +y toward galactic rotation, +z toward north galactic pole',
+      epoch: `J2016 ${S.t ? fmtSpan(L.t) : ''}`.trim(), regionRadiusPc: +L.R.toFixed(2), maxJumpPc: L.J, linksPerStar: L.K },
+    stars, lanes: L.edges.map(([a, b, d]) => [a, b, +d.toFixed(3)])
+  });
+}
+$('copyGraph').addEventListener('click', async (e) => {
+  if (!S.lane) return;
+  const txt = graphJSON(), btn = e.target, kb = Math.round(txt.length / 1024);
+  try { await navigator.clipboard.writeText(txt); btn.textContent = `Copied ${fmt.format(kb)} KB`; $('graphOut').hidden = true; }
+  catch { const ta = $('graphOut'); ta.value = txt; ta.hidden = false; ta.focus(); ta.select(); btn.textContent = 'Selected below, press Ctrl+C'; }
+  setTimeout(() => { btn.textContent = 'Copy graph as JSON'; }, 2600);
+});
+VIEWS.lanes = () => { const o = sunPos(); flyTo(o, o.clone().add(new THREE.Vector3(-18, -28, 16))); };
+
+// mobile toggles
+if (matchMedia('(max-width: 760px)').matches) document.body.classList.add('m-hide-hr');
+$('tSide').addEventListener('click', () => { document.body.classList.toggle('m-hide-side'); document.body.classList.add('m-hide-hr'); });
+$('tHr').addEventListener('click', () => { document.body.classList.toggle('m-hide-hr'); document.body.classList.add('m-hide-side'); requestAnimationFrame(() => { hrSize(); drawHR(true); }); });
+
+updateExposure(); updateFloor(); updateSpot(); laneParams(); setTrailLen(); resize();
+requestAnimationFrame(frame);
+loadBuiltin().then(() => { $('loading').hidden = true; try { if (localStorage.getItem('gaia-atlas-drift') === '0') setDrift(false, true); } catch (e) {} }).catch((err) => { $('loading').textContent = `Could not load the star data (${err.message}). Reload the page to try again.`; });
+})();
+</script>
