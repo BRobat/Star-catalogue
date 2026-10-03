@@ -107,17 +107,50 @@ a { color: var(--foil); }
 #drop { position: fixed; inset: 0; border: 2px dashed var(--foil); background: rgba(6,9,18,0.7); display: grid; place-items: center; font: 600 22px var(--f-display); color: var(--foil); z-index: 10; }
 #toggles { display: none; }
 
+.sheet-x { display: none; }
+#card .more { display: none; }
+/* Phones: the map gets the whole screen. Controls and the HR diagram open as bottom sheets,
+   one at a time, sitting on top of the timeline; the star card sits at the top. */
 @media (max-width: 760px) {
-  #side { top: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); left: 10px; right: 10px; width: auto; max-height: 52%; }
-  #hr { left: 10px; right: 10px; width: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
-  #card { left: 10px; right: 10px; width: auto; top: calc(56px + env(safe-area-inset-top, 0px)); }
-  #toggles { display: flex; position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px; gap: 6px; }
-  #toggles .chip { background: var(--panel); }
-  body.m-hide-side #side, body.m-hide-hr #hr { display: none; }
-  #timebar { left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; }
-  #side, #hr { bottom: calc(200px + env(safe-area-inset-bottom, 0px)); }
-  #side { max-height: 40%; }
+  :root { --tb-h: 64px; }
+  #toggles { display: flex; position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px; gap: 8px; z-index: 3; }
+  #toggles .chip { background: var(--panel); padding: 9px 14px; font-size: 13px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  #side, #hr { display: none; left: 8px; right: 8px; width: auto; top: auto;
+    bottom: calc(var(--tb-h) + 16px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100% - var(--tb-h) - 84px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto; overscroll-behavior: contain; z-index: 2; }
+  #side { max-height: min(62%, calc(100% - var(--tb-h) - 84px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))); padding: 14px 16px 18px; gap: 18px; }
+  body.m-side #side, body.m-hr #hr { display: flex; flex-direction: column; }
+  #hr { display: none; }
+  body.m-hr #hr { display: block; }
+  body.m-side #card, body.m-hr #card { display: none; }
+  .sheet-x { display: grid; place-items: center; position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; border: 0; background: none; color: var(--muted); font-size: 22px; cursor: pointer; z-index: 1; }
+  #side > div:first-of-type { padding-right: 36px; }
+  #hr .label { padding-right: 40px; min-height: 24px; align-items: center; }
+  h1 { font-size: 22px; }
+  #hrc { height: 210px; }
+  #card { left: 8px; right: 8px; width: auto; top: calc(60px + env(safe-area-inset-top, 0px)); max-height: calc(100% - var(--tb-h) - 92px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; }
+  #card .x { width: 40px; height: 40px; top: 4px; right: 4px; }
+  #card { padding: 12px 14px; }
+  #card h2 { font-size: 18px; padding-right: 36px; }
+  #card .alt { margin-bottom: 8px; }
+  #card .more { display: inline-block; margin: -4px 0 10px; padding: 6px 12px; }
+  #card:not(.open) dl > :nth-child(n+5) { display: none; }
+  #card:not(.open) dl { margin-bottom: 8px; }
+  #card .spot { margin: 0 0 10px; padding-top: 8px; }
+  #timebar { left: 8px; right: 8px; max-width: none; margin: 0; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; gap: 10px; }
+  #timebar.off { padding: 8px 8px 8px 14px; }
+  #timebar.off .tb-sub { display: none; }
+  #timebar.off .tb-t { font-size: 15px; }
+  .tb-top { gap: 10px; }
   .tb-t { font-size: 18px; }
+  .tb-speed { order: 3; width: 100%; grid-template-columns: repeat(3, 1fr); }
+  .tb-frame { flex: 1 1 100%; grid-template-columns: repeat(2, 1fr); }
+  /* bigger touch targets */
+  .chip, .btn { padding: 8px 12px; font-size: 13px; }
+  .seg button { padding: 10px 4px; font-size: 13px; }
+  input[type=range] { height: 28px; }
+  #search { padding: 11px 12px; font-size: 16px; } /* 16px stops iOS zooming into the field */
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
@@ -129,11 +162,12 @@ a { color: var(--foil); }
 <div id="loading">Loading 118,658 stars…</div>
 
 <div id="toggles">
-  <button class="chip" id="tSide" type="button">Controls</button>
-  <button class="chip" id="tHr" type="button">HR diagram</button>
+  <button class="chip" id="tSide" type="button" aria-pressed="false">Controls</button>
+  <button class="chip" id="tHr" type="button" aria-pressed="false">HR diagram</button>
 </div>
 
-<aside id="side" class="panel">
+<aside id="side" class="panel" aria-label="Controls">
+  <button class="sheet-x" type="button" data-close aria-label="Close controls">×</button>
   <div>
     <h1>Gaia <span>Star Atlas</span></h1>
     <p class="sub">Stars around the Sun, placed in 3D by their measured distances and moved along their measured velocities. Galactic plane is horizontal; the Sun sits at the centre.</p>
@@ -234,6 +268,7 @@ WHERE parallax &gt; 2
 </aside>
 
 <section id="hr" class="panel" aria-label="Hertzsprung–Russell diagram">
+  <button class="sheet-x" type="button" data-close aria-label="Close HR diagram">×</button>
   <div class="label"><span>Hertzsprung–Russell diagram</span><output id="hrCount"></output></div>
   <canvas id="hrc"></canvas>
   <div class="hint"><span id="hrHint">Drag to select a region and isolate it in 3D</span><button id="clearBox" type="button" hidden>Clear selection</button></div>
@@ -273,6 +308,7 @@ WHERE parallax &gt; 2
   <h2 id="cName"></h2>
   <div class="alt" id="cAlt"></div>
   <dl id="cDl"></dl>
+  <button class="btn more" id="cMore" type="button" aria-expanded="false">More details</button>
   <div class="row"><button class="btn primary" id="flyTo" type="button">Fly to star</button><button class="btn" id="follow" type="button" aria-pressed="false">Follow</button><button class="btn" id="homeBtn" type="button">Back to Sun</button></div>
   <div class="spot">
     <div class="row" style="justify-content:space-between"><span class="label" style="flex:1">Spotlight neighbours</span><button class="chip" id="spotBtn" type="button" aria-pressed="true">On</button></div>
@@ -291,6 +327,7 @@ WHERE parallax &gt; 2
 (() => {
 'use strict';
 const $ = (id) => document.getElementById(id);
+const isPhone = matchMedia('(max-width: 760px)');
 const fmt = new Intl.NumberFormat('en-US');
 const PC_LY = 3.26156;
 
@@ -626,6 +663,7 @@ $('clearBox').addEventListener('click', () => setBox(null));
 
 // ---------- picking & star card ----------
 const tmpM = new THREE.Matrix4();
+const COARSE = matchMedia('(pointer: coarse)').matches, PICK_R = COARSE ? 26 : 12;
 function pick(cx, cy) {
   const rect = canvas.getBoundingClientRect();
   tmpM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -638,7 +676,7 @@ function pick(cx, cy) {
     const sx = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / w * 0.5 + 0.5) * W;
     const sy = (1 - ((e[1] * x + e[5] * y + e[9] * z + e[13]) / w * 0.5 + 0.5)) * H;
     const dpx = Math.hypot(sx - (cx - rect.left), sy - (cy - rect.top));
-    if (dpx > 12) continue;
+    if (dpx > PICK_R) continue;
     const dc = Math.max(1e-4, Math.hypot(x - cp.x, y - cp.y, z - cp.z));
     const m = D.absmag[i] + 5 * Math.log10(dc / 10);
     const inBox = !S.box || (D.ci[i] >= S.box[0] && D.ci[i] <= S.box[1] && D.absmag[i] >= S.box[2] && D.absmag[i] <= S.box[3]);
@@ -662,9 +700,11 @@ function galLB(i) {
   return `${l.toFixed(2)}°, ${b >= 0 ? '+' : ''}${b.toFixed(2)}°`;
 }
 function select(i) {
-  if (i !== S.sel) S.spotDirty = true;
+  const changed = i !== S.sel;
+  if (changed) S.spotDirty = true;
   S.sel = i; uniforms.uSel.value = i; uniforms.uFocusOn.value = (S.spotOn && i >= 0) ? 1 : 0;
   if (i < 0) { $('card').hidden = true; drawHR(false); return; }
+  if (changed && isPhone.matches && S.sheet) setSheet(null);
   const [name, alt] = starName(i);
   $('cName').textContent = name;
   const extra = [alt, D.hip && D.hip[i] > 0 && !name.startsWith('HIP') ? `HIP ${D.hip[i]}` : ''].filter(Boolean).join(' · ');
@@ -702,10 +742,11 @@ let down = null;
 canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY, performance.now()]; });
 canvas.addEventListener('pointerup', (e) => {
   if (!down || !D) return;
-  if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5 && performance.now() - down[2] < 400) select(pick(e.clientX, e.clientY));
+  if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) < (COARSE ? 10 : 5) && performance.now() - down[2] < (COARSE ? 500 : 400)) select(pick(e.clientX, e.clientY));
   down = null;
 });
 $('closeCard').addEventListener('click', () => select(-1));
+$('cMore').addEventListener('click', (e) => { const open = $('card').classList.toggle('open'); e.target.setAttribute('aria-expanded', open); e.target.textContent = open ? 'Fewer details' : 'More details'; });
 
 // ---------- camera moves ----------
 let tween = null;
@@ -790,7 +831,8 @@ function chooseLabels() {
   const rect = canvas.getBoundingClientRect(), cp = camera.position, specs = [];
   const taken = []; // overlap avoidance in screen space, judged at selection time
   const free = (x, y, w) => { for (const t of taken) if (Math.abs(t[1] - y) < 13 && x < t[0] + t[2] + 6 && t[0] < x + w + 6) return false; taken.push([x, y, w]); return true; };
-  const onScreen = (p) => p && p[0] >= 0 && p[1] >= 0 && p[0] <= rect.width && p[1] <= rect.height;
+  const topClear = isPhone.matches ? 60 : 0;
+  const onScreen = (p) => p && p[0] >= 0 && p[1] >= topClear && p[0] <= rect.width && p[1] <= rect.height;
   const add = (key, pos, html, cls, opts = {}) => specs.push({ key, pos, html, cls, center: !!opts.center, dy: opts.dy || 0, op: opts.op });
   // the selected star and route start always get labels first
   if (S.sel >= 0) { const p = project(PX(S.sel), PY(S.sel), PZ(S.sel), rect); const t = starName(S.sel)[0]; if (onScreen(p)) free(p[0] + 8, p[1], t.length * 6.5); add('sel' + S.sel, starPos(S.sel), esc(t), 'lbl sel'); }
@@ -878,6 +920,25 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 let lastNow = 0, anchorPrev = null;
+// On phones, panels cover part of the map. Shift the projection so the orbit centre (the selected
+// star, or the Sun) sits in the middle of whatever strip of map is still visible.
+let viewShift = 0;
+function updateViewShift() {
+  let want = 0;
+  if (isPhone.matches) {
+    const H = window.innerHeight, vis = (el) => el && el.getClientRects().length > 0; // offsetParent is always null for fixed panels
+    let top = $('toggles').getBoundingClientRect().bottom;
+    if (vis($('card'))) top = Math.max(top, $('card').getBoundingClientRect().bottom);
+    let bottom = $('timebar').getBoundingClientRect().top;
+    for (const id of ['side', 'hr']) if (vis($(id))) bottom = Math.min(bottom, $(id).getBoundingClientRect().top);
+    if (bottom - top > 80) want = (top + bottom) / 2 - H / 2;
+  }
+  viewShift += (want - viewShift) * 0.18;
+  if (Math.abs(want - viewShift) < 0.5) viewShift = want;
+  const W = window.innerWidth, H = window.innerHeight;
+  if (Math.abs(viewShift) < 0.5) { if (camera.view && camera.view.enabled) camera.clearViewOffset(); }
+  else camera.setViewOffset(W, H, 0, -viewShift, W, H);
+}
 function anchorIndex() { if (S.follow && S.sel >= 0) return S.sel; return (!D.isGaiaUpload && S.frame === 'lsr') ? 0 : -1; }
 function frame(now) {
   const dt = lastNow ? Math.min(0.1, (now - lastNow) / 1000) : 0; lastNow = now;
@@ -897,7 +958,7 @@ function frame(now) {
     }
     anchorPrev = [cur[0], cur[1], cur[2], ai];
   } else anchorPrev = null;
-  stepTween(now); controls.update(); updateFocus(); renderer.render(scene, camera);
+  stepTween(now); controls.update(); updateFocus(); updateViewShift(); renderer.render(scene, camera);
   if (now - labelTimer > 150) { labelTimer = now; chooseLabels(); if (S.cardDirty && S.sel >= 0) { S.cardDirty = false; select(S.sel); } }
   else placeLabels(); // same camera matrices the frame was just rendered with
   requestAnimationFrame(frame);
@@ -1083,7 +1144,7 @@ $('driftBtn').addEventListener('click', () => setDrift(!S.driftOn));
 // ---------- spotlight around the selected star ----------
 S.spotOn = true; S.spotLy = 25;
 const spotLyFromSlider = (v) => 10 * Math.pow(10, v / 1000 * 2.5);
-function fmtLy(ly) { return ly < 100 ? `${ly.toFixed(ly < 20 ? 1 : 0)} ly` : `${fmt.format(Math.round(ly))} ly`; }
+function fmtLy(ly) { if (ly < 0.05) { const au = ly * 63241; return au < 1 ? '< 1 AU' : `${fmt.format(Math.round(au))} AU`; } return ly < 100 ? `${ly.toFixed(ly < 20 ? 1 : 0)} ly` : `${fmt.format(Math.round(ly))} ly`; }
 function updateSpot() {
   S.spotLy = spotLyFromSlider(+$('spotR').value);
   uniforms.uFocusR.value = S.spotLy / PC_LY;
@@ -1238,9 +1299,20 @@ $('copyGraph').addEventListener('click', async (e) => {
 VIEWS.lanes = () => { const o = sunPos(); flyTo(o, o.clone().add(new THREE.Vector3(-18, -28, 16))); };
 
 // mobile toggles
-if (matchMedia('(max-width: 760px)').matches) document.body.classList.add('m-hide-hr');
-$('tSide').addEventListener('click', () => { document.body.classList.toggle('m-hide-side'); document.body.classList.add('m-hide-hr'); });
-$('tHr').addEventListener('click', () => { document.body.classList.toggle('m-hide-hr'); document.body.classList.add('m-hide-side'); requestAnimationFrame(() => { hrSize(); drawHR(true); }); });
+function setSheet(name) {
+  S.sheet = name;
+  document.body.classList.toggle('m-side', name === 'side');
+  document.body.classList.toggle('m-hr', name === 'hr');
+  $('tSide').setAttribute('aria-pressed', name === 'side');
+  $('tHr').setAttribute('aria-pressed', name === 'hr');
+  if (name === 'hr') requestAnimationFrame(() => { hrSize(); drawHR(true); });
+}
+$('tSide').addEventListener('click', () => setSheet(S.sheet === 'side' ? null : 'side'));
+$('tHr').addEventListener('click', () => setSheet(S.sheet === 'hr' ? null : 'hr'));
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => setSheet(null)));
+// sheets sit on top of the timeline, whose height changes with drift on/off
+if (window.ResizeObserver) new ResizeObserver(([e]) => document.documentElement.style.setProperty('--tb-h', Math.ceil(e.target.getBoundingClientRect().height) + 'px')).observe($('timebar'));
+isPhone.addEventListener && isPhone.addEventListener('change', () => { setSheet(null); requestAnimationFrame(() => { hrSize(); drawHR(true); }); });
 
 updateExposure(); updateFloor(); updateSpot(); laneParams(); setTrailLen(); resize();
 requestAnimationFrame(frame);
