@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gaia Star Atlas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -18,7 +23,9 @@
   --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: dark;
 }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
+body { margin: 0; }
 body { background: var(--ink); color: var(--fg); font: 13px/1.45 var(--f-body); overflow: hidden; }
 #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 #gl:active { cursor: grabbing; }
@@ -114,6 +121,8 @@ a { color: var(--foil); }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
+</head>
+<body>
 
 <canvas id="gl" aria-label="3D map of stars around the Sun"></canvas>
 <div id="labels"></div>
@@ -1239,3 +1248,5 @@ requestAnimationFrame(frame);
 loadBuiltin().then(() => { $('loading').hidden = true; try { if (localStorage.getItem('gaia-atlas-drift') === '0') setDrift(false, true); } catch (e) {} }).catch((err) => { $('loading').textContent = `Could not load the star data (${err.message}). Reload the page to try again.`; });
 })();
 </script>
+</body>
+</html>
