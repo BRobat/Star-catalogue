@@ -239,21 +239,21 @@ WHERE parallax &gt; 2
   <div class="hint"><span id="hrHint">Drag to select a region and isolate it in 3D</span><button id="clearBox" type="button" hidden>Clear selection</button></div>
 </section>
 
-<section id="timebar" class="panel" aria-label="Stellar drift over time">
+<section id="timebar" class="panel off" aria-label="Stellar drift over time">
   <div class="tb-top">
     <button class="play tb-hide" id="play" type="button" aria-label="Play">
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path id="playIcon" d="M4 2.5v11l9-5.5z" fill="currentColor"></path></svg>
     </button>
     <div class="tb-read">
-      <div class="tb-t" id="tRead">Today</div>
-      <div class="tb-sub" id="tSub">Gaia epoch J2016 · positions as measured</div>
+      <div class="tb-t" id="tRead">Drift off</div>
+      <div class="tb-sub" id="tSub">Stars fixed at their measured J2016 positions</div>
     </div>
     <div class="seg tb-speed tb-hide" id="speed" aria-label="Playback speed">
       <button type="button" data-s="0.001" aria-pressed="false">1 kyr/s</button>
       <button type="button" data-s="0.01" aria-pressed="true">10 kyr/s</button>
       <button type="button" data-s="0.1" aria-pressed="false">100 kyr/s</button>
     </div>
-    <button class="chip" id="driftBtn" type="button" aria-pressed="true" title="Turn stellar motion on or off">Drift on</button>
+    <button class="chip" id="driftBtn" type="button" aria-pressed="false" title="Turn stellar motion on or off">Drift off</button>
   </div>
   <input class="tb-hide" type="range" id="time" min="-1000" max="1000" value="0" aria-label="Time offset from today">
   <div class="tb-scale tb-hide" aria-hidden="true"><span>−5 Myr</span><span>−1.25</span><span>now</span><span>+1.25</span><span>+5 Myr</span></div>
@@ -1064,7 +1064,7 @@ $('g710').addEventListener('click', () => {
 
 
 // ---------- drift on/off ----------
-S.driftOn = true;
+S.driftOn = false; // the map opens with stars fixed; the button turns drift on
 function setDrift(on, quiet) {
   if (on === S.driftOn) return;
   S.driftOn = on;
@@ -1076,7 +1076,6 @@ function setDrift(on, quiet) {
   } else setTime(S.savedT || 0);
   if (trails) trails.visible = on && S.trails;
   anchorPrev = null;
-  if (!quiet) { try { localStorage.setItem('gaia-atlas-drift', on ? '1' : '0'); } catch (e) {} }
 }
 $('driftBtn').addEventListener('click', () => setDrift(!S.driftOn));
 
@@ -1245,7 +1244,7 @@ $('tHr').addEventListener('click', () => { document.body.classList.toggle('m-hid
 
 updateExposure(); updateFloor(); updateSpot(); laneParams(); setTrailLen(); resize();
 requestAnimationFrame(frame);
-loadBuiltin().then(() => { $('loading').hidden = true; try { if (localStorage.getItem('gaia-atlas-drift') === '0') setDrift(false, true); } catch (e) {} }).catch((err) => { $('loading').textContent = `Could not load the star data (${err.message}). Reload the page to try again.`; });
+loadBuiltin().then(() => { $('loading').hidden = true; }).catch((err) => { $('loading').textContent = `Could not load the star data (${err.message}). Reload the page to try again.`; });
 })();
 </script>
 </body>
